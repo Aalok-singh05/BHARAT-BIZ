@@ -32,7 +32,7 @@ const Sidebar = ({ isExpanded, setIsExpanded }) => {
         
         {isExpanded && (
           <span className="text-xl font-bold gradient-text animate-fadeInUp">
-            Saathi AI
+            Helper AI
           </span>
         )}
       </div>
