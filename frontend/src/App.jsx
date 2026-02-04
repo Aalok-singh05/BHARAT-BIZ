@@ -3,6 +3,8 @@ import './App.css'
 import Demo from './Demo.jsx';
 import { Routes, Route } from 'react-router-dom';
 import Dashboard from './Dashboard.jsx'
+import MerchantLayout from './MerchantLayout.jsx';
+import AgenticChat from './AgenticChat.jsx';
 
 function App() {
   return (
@@ -10,7 +12,7 @@ function App() {
       <Routes>
         <Route index element={<Demo/>} />
         <Route path='/Dashboard' element={<Dashboard/>} />
-      </Routes>
+      </Routes> 
     </div>
   )
 }

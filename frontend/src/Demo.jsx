@@ -97,7 +97,7 @@ const AgenticAICopilot = () => {
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-40 px-6 md:px-12 py-6 backdrop-blur-xl bg-[#0a0808]/80 border-b border-[#ff9f43]/10">
         <div className="max-w-[1400px] mx-auto flex items-center justify-between">
-          <div className="text-2xl font-bold gradient-text">Saathi AI</div>
+          <div className="text-2xl font-bold gradient-text">Helper</div>
           <div className="hidden md:flex items-center gap-8">
             <a href="#features" className="text-[#a89d94] hover:text-[#ff9f43] transition-colors">Features</a>
             <a href="#use-cases" className="text-[#a89d94] hover:text-[#ff9f43] transition-colors">Use Cases</a>
