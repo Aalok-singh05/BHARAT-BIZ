@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import './index.css';
+import Dashboard from './Dashboard.jsx';
+import AuthPage from './AuthPage.jsx';
 
 
 const AgenticAICopilot = () => {
@@ -97,13 +99,35 @@ const AgenticAICopilot = () => {
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-40 px-6 md:px-12 py-6 backdrop-blur-xl bg-[#0a0808]/80 border-b border-[#ff9f43]/10">
         <div className="max-w-[1400px] mx-auto flex items-center justify-between">
-          <div className="text-2xl font-bold gradient-text">Saathi AI</div>
+          
+          {/* Logo */}
+          <Link to="/" className="text-2xl font-bold gradient-text no-underline"></Link>
+
+          {/* Nav Items */}
           <div className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-[#a89d94] hover:text-[#ff9f43] transition-colors">Features</a>
-            <a href="#use-cases" className="text-[#a89d94] hover:text-[#ff9f43] transition-colors">Use Cases</a>
-            <Link to="/Dashboard" className="px-6 py-2.5 bg-[#ff9f43] text-[#0a0808] rounded-lg font-semibold hover:bg-[#ffb366] transition-all hover:scale-105">
-              Open Dashboard
+            <a href="#how-it-works" className="text-[#a89d94] hover:text-[#ff9f43] transition-colors text-sm font-medium">
+              How It Works
+            </a>
+            <a href="#use-cases" className="text-[#a89d94] hover:text-[#ff9f43] transition-colors text-sm font-medium">
+              Use Cases
+            </a>
+            <Link to="/dashboard" className="text-[#a89d94] hover:text-[#ff9f43] transition-colors text-sm font-medium">
+              Dashboard
             </Link>
+
+            {/* Split Auth Buttons */}
+            <div className="flex items-center gap-4 ml-2">
+              <Link to="/login">
+                <button className="text-[#f5f3f0] hover:text-[#ff9f43] font-semibold transition-colors">
+                  Login
+                </button>
+              </Link>
+              <Link to="/signup">
+                <button className="px-5 py-2.5 bg-[#ff9f43] text-[#0a0808] rounded-lg font-bold hover:bg-[#ffb366] transition-all hover:scale-105 shadow-[0_0_15px_rgba(255,159,67,0.3)]">
+                  Start Free
+                </button>
+              </Link>
+            </div>
           </div>
         </div>
       </nav>
@@ -115,9 +139,9 @@ const AgenticAICopilot = () => {
         </div>
 
         <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-8 animate-fadeInUp leading-[1.1] max-w-5xl">
-          <span className="gradient-text">Your Business.</span><br />
+          <span className="gradient-text">Bharat BIZ.</span><br />
           <span className="gradient-text">Run by AI.</span><br />
-          <span className="text-[#f5f3f0]">Built for India.</span>
+          <span className="text-[#f5f3f0]">Business Ab Jeetega</span>
         </h1>
 
         <p className="text-lg md:text-2xl text-[#a89d94] mb-12 max-w-3xl animate-fadeInUp leading-relaxed" style={{ animationDelay: '0.2s' }}>
