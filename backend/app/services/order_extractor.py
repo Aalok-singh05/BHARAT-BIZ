@@ -26,8 +26,16 @@ def extract_textile_order(message: str):
 
     response = llm.invoke(full_prompt)
 
-    raw_output = response.content
+    raw_output = response.content.strip()
 
+    # remove markdown JSON fences if present (was causing problem)
+    if raw_output.startswith("```"):
+        raw_output = raw_output.split("```")[1]
+
+    if raw_output.startswith("json"):
+        raw_output = raw_output[4:].strip()
+    
+    
     try:
         parsed_json = json.loads(raw_output)
 
