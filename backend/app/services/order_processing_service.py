@@ -36,5 +36,7 @@ def process_customer_order(message: str,
             "color": color,
             "response": negotiation_response
         })
-
-        return responses
+    
+    return responses
+    
+    
