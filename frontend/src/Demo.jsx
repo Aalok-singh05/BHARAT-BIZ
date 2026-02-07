@@ -96,21 +96,7 @@ const AgenticAICopilot = () => {
           <Link to="/" className="text-2xl font-bold gradient-text no-underline"></Link>
 
           {/* Nav Items */}
-          
-          {/* Logo */}
-          <Link to="/" className="text-2xl font-bold gradient-text no-underline">Saathi AI</Link>
-
-          {/* Nav Items */}
           <div className="hidden md:flex items-center gap-8">
-            <a href="#how-it-works" className="text-[#a89d94] hover:text-[#ff9f43] transition-colors text-sm font-medium">
-              How It Works
-            </a>
-            <a href="#use-cases" className="text-[#a89d94] hover:text-[#ff9f43] transition-colors text-sm font-medium">
-              Use Cases
-            </a>
-            <Link to="/dashboard" className="text-[#a89d94] hover:text-[#ff9f43] transition-colors text-sm font-medium">
-              Dashboard
-            </Link>
             <a href="#demo" className="text-[#a89d94] hover:text-[#ff9f43] transition-colors text-sm font-medium">
               How it works
             </a>
@@ -121,20 +107,6 @@ const AgenticAICopilot = () => {
             <Link to="/dashboard" className="text-[#a89d94] hover:text-[#ff9f43] transition-colors text-sm font-medium">
               Dashboard
             </Link>
-
-            {/* Split Auth Buttons */}
-            <div className="flex items-center gap-4 ml-2">
-              <Link to="/login">
-                <button className="text-[#f5f3f0] hover:text-[#ff9f43] font-semibold transition-colors">
-                  Login
-                </button>
-              </Link>
-              <Link to="/signup">
-                <button className="px-5 py-2.5 bg-[#ff9f43] text-[#0a0808] rounded-lg font-bold hover:bg-[#ffb366] transition-all hover:scale-105 shadow-[0_0_15px_rgba(255,159,67,0.3)]">
-                  Start Free
-                </button>
-              </Link>
-            </div>
 
             {/* Split Auth Buttons */}
             <div className="flex items-center gap-4 ml-2">
