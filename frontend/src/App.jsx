@@ -53,6 +53,7 @@ function App() {
             <Route path="/dashboard" element={<MerchantDashboard />} />
             <Route path="/login" element={<AuthPage mode="login" />} />
             <Route path="/signup" element={<AuthPage mode="signup" />} />
+            <Route path="/AgenticChat" element={<Agenticchat/>} />
           </Routes>
         </div>
       </div>
