@@ -10,6 +10,7 @@ app = FastAPI()
 
 class OrderRequest(BaseModel):
     message: str
+    phone: str
 
 
 @app.get("/")
@@ -33,7 +34,6 @@ def extract_order(request: OrderRequest):
 @app.post("/process-order")
 def process_order(request: OrderRequest):
 
-    # MOCK inventory (temporary until DB ready)
     inventory = [
         InventoryBatch(
             material_name="cotton",
@@ -53,16 +53,17 @@ def process_order(request: OrderRequest):
         )
     ]
 
-    # Temporary color mapping
     color_map = {
         "cotton": "blue",
         "polyester": "red"
     }
 
     result = process_customer_order(
-        request.message,
-        inventory,
-        color_map
+        message=request.message,
+        customer_phone=request.phone,
+        available_batches=inventory,
+        color_map=color_map
     )
 
     return result
+
