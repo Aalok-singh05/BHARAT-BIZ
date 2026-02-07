@@ -52,7 +52,6 @@ def process_customer_order(
             "response": negotiation_response
         })
 
-    # ⭐ Update workflow state
     
     if negotiation_required:
         update_workflow_state(session.order_id, OrderState.CUSTOMER_NEGOTIATION)
