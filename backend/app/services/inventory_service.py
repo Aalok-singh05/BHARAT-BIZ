@@ -1,0 +1,80 @@
+from typing import List, Dict
+
+from app.schemas.inventory_schema import InventoryBatch
+from app.schemas.measurement_schema import TextileMeasurement
+
+
+def calculate_batch_meters(batch: InventoryBatch) -> float:
+    """
+    Calculates total available meters in a batch.
+    """
+    return (batch.rolls_available * batch.meters_per_roll) + batch.loose_meters_available
+
+
+def filter_matching_batches(batches: List[InventoryBatch],
+                            material_name: str,
+                            color: str) -> List[InventoryBatch]:
+    """
+    Filters inventory batches by material and color.
+    """
+    return [
+        batch for batch in batches        
+        if batch.material_name.lower() == material_name.lower()
+        and batch.color.lower() == color.lower()
+    ]
+
+
+def check_inventory(order_item: TextileMeasurement,
+                    available_batches: List[InventoryBatch],
+                    color: str) -> Dict:
+    """
+    Checks inventory availability and returns fulfillment plan.
+    """
+
+    required_meters = order_item.normalized_meters
+
+    matching_batches = filter_matching_batches(available_batches,
+                                               order_item.material_name,
+                                               color)
+
+    if not matching_batches:
+        return {
+            "status": "OUT_OF_STOCK",
+            "fulfilled_batches": [],
+            "available_meters": 0
+        }
+
+    fulfilled_batches = []
+    total_available = 0
+    remaining_required = required_meters
+
+    for batch in matching_batches:
+        batch_meters = calculate_batch_meters(batch)
+
+        if remaining_required <= 0:
+            break
+
+        allocated = min(batch_meters, remaining_required)
+
+        fulfilled_batches.append({
+            "batch_id": batch.batch_id,
+            "allocated_meters": allocated
+        })
+
+        total_available += batch_meters
+        remaining_required -= allocated
+
+    if total_available >= required_meters:
+        status = "FULL_AVAILABLE"
+    
+    elif total_available > 0:
+        status = "PARTIAL_AVAILABLE"
+    
+    else:
+        status = "OUT_OF_STOCK"
+
+    return {
+        "status": status,
+        "fulfilled_batches": fulfilled_batches,
+        "available_meters": total_available
+    }

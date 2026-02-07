@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom'; // 1. Import useLocation
+import React, { useState } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom'; // 1. Import useLocation
 import Demo from './Demo.jsx';
+import Document from './Documents.jsx';
+import BusinessMemory from './BussinessMemory.jsx';
+import InventoryManagement from './InventoryManagement.jsx';
+import MerchantDashboard from './Dashboard.jsx';
+import Sidebar from './Sidebar.jsx';
+import Agenticchat from './AgenticChat.jsx';
+import AuthPage from './AuthPage.jsx';
 import Document from './Documents.jsx';
 import BusinessMemory from './BussinessMemory.jsx';
 import InventoryManagement from './InventoryManagement.jsx';
@@ -18,6 +27,11 @@ function App() {
   // 3. Define which pages should hide the sidebar
   // You can add more paths here if needed
   const hideSidebarRoutes = ['/', '/login', '/signup'];
+  
+  // Check if current path matches any of the hidden route
+
+  // 3. Define which pages should hide the sidebar
+  // You can add more paths here if needed
   
   // Check if current path matches any of the hidden routes
   const shouldShowSidebar = !hideSidebarRoutes.includes(location.pathname);
@@ -56,9 +70,7 @@ function App() {
             <Route path="/AgenticChat" element={<Agenticchat/>} />
           </Routes>
         </div>
-      </div>
-    </div>
-  );
-}
+    </div> 
+        
 
 export default App;
