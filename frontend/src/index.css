@@ -33,6 +33,36 @@
 
 @layer components {
   /* Design System - The "Look" */
+  .spotlight-card {
+    position: relative;
+    overflow: hidden;
+    /* We initialize these variables so it doesn't break if js is slow */
+    --mouse-x: 50%;
+    --mouse-y: 50%;
+  }
+
+  /* The Glow Effect */
+  .spotlight-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    /* A warm orange glow that fades out */
+    background: radial-gradient(800px circle at var(--mouse-x) var(--mouse-y), rgba(255, 159, 67, 0.15), transparent 40%);
+    opacity: 0;
+    transition: opacity 0.5s;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .spotlight-card:hover::before {
+    opacity: 1;
+  }
+  
+  /* Ensure text/icons sit ON TOP of the glow */
+  .spotlight-card > * {
+    position: relative;
+    z-index: 1;
+  }
   .glass-card {
     background: rgba(26, 15, 10, 0.4);
     backdrop-filter: blur(20px);
@@ -79,6 +109,7 @@
     box-shadow: 0 0 10px rgba(255, 159, 67, 0.2);
   }
 }
+
 
 @layer utilities {
   /* Animations */
