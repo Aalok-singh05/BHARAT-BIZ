@@ -15,8 +15,7 @@ def load_prompt():
 
 def classify_customer_reply(
     message: str,
-    session_items: List[TextileMeasurement]
-):
+    session_items: List[TextileMeasurement]):
 
     llm = get_llm()
     prompt_template = load_prompt()

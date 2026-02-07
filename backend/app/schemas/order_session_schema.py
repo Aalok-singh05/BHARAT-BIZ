@@ -4,7 +4,7 @@ from datetime import datetime
 
 from app.workflows.order_states import OrderState
 from app.schemas.measurement_schema import TextileMeasurement
-
+from app.schemas.order_item_schema import OrderItem
 
 class OrderSession(BaseModel):
     """
@@ -14,7 +14,7 @@ class OrderSession(BaseModel):
 
     order_id: str
     customer_phone: str
-    items: List[TextileMeasurement] = []
+    items: List[OrderItem] = []
     workflow_state: OrderState = OrderState.ORDER_INITIATED
     negotiation_pending: bool = False
     owner_approval_required: bool = False
