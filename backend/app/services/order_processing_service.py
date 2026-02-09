@@ -3,7 +3,12 @@ from typing import List, Dict
 from app.services.order_extractor import extract_textile_order
 from app.services.inventory_service import check_inventory
 from app.services.negotiation_service import generate_inventory_response
-from app.services.order_session_manager import create_order_session, update_workflow_state, set_negotiation_pending
+from app.services.order_session_manager import (
+    create_order_session,
+    update_workflow_state,
+    set_negotiation_pending
+)
+
 from app.schemas.inventory_schema import InventoryBatch
 from app.workflows.order_states import OrderState
 
@@ -11,9 +16,7 @@ from app.workflows.order_states import OrderState
 def process_customer_order(
     message: str,
     customer_phone: str,
-    available_batches: List[InventoryBatch],
-    color_map: Dict[str, str]
-) -> Dict:
+    available_batches: List[InventoryBatch]) -> Dict:
     """
     Full order processing pipeline with OrderSession creation.
     """
@@ -24,12 +27,12 @@ def process_customer_order(
     session = create_order_session(customer_phone, extracted_items)
 
     responses = []
-
     negotiation_required = False
 
     for item in extracted_items:
 
-        color = color_map.get(item.material_name.lower(), "unknown")
+        # ⭐ NEW — Color comes from extracted item
+        color = item.color
 
         inventory_result = check_inventory(
             item,
@@ -52,13 +55,12 @@ def process_customer_order(
             "response": negotiation_response
         })
 
-    
     if negotiation_required:
         update_workflow_state(session.order_id, OrderState.CUSTOMER_NEGOTIATION)
         set_negotiation_pending(session.order_id, True)
+    
     else:
         update_workflow_state(session.order_id, OrderState.WAITING_OWNER_CONFIRMATION)
-
 
     return {
         "order_id": session.order_id,
