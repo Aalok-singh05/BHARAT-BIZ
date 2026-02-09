@@ -8,6 +8,7 @@ class TextileMeasurement(BaseModel):
     """
 
     material_name: str
+    color: str
     input_quantity: float
     input_unit: str  # Example: "roll", "meter"
     normalized_meters: float

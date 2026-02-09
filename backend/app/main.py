@@ -18,7 +18,11 @@ from app.scheduler.reminders import check_overdue_customers
 
 from app.services.order_extractor import extract_textile_order
 from app.services.order_processing_service import process_customer_order
+from app.services.negotiation_handler_service import handle_negotiation_message
+from app.services.order_session_manager import get_active_session_by_phone
+
 from app.schemas.inventory_schema import InventoryBatch
+from app.workflows.order_states import OrderState
 
 
 # App initialization
@@ -48,6 +52,7 @@ def on_startup():
 
 class OrderRequest(BaseModel):
     message: str
+    phone: str
 
 
 # Routes
@@ -68,7 +73,17 @@ def extract_order(request: OrderRequest):
 @app.post("/process-order")
 def process_order(request: OrderRequest):
 
-    # MOCK inventory (temporary until DB ready)
+    # ⭐ Step 1 — Check active session
+    session = get_active_session_by_phone(request.phone)
+
+    # ⭐ Step 2 — If negotiation ongoing → route to negotiation handler
+    if session and session.workflow_state == OrderState.CUSTOMER_NEGOTIATION:
+        return handle_negotiation_message(
+            customer_phone=request.phone,
+            message=request.message
+        )
+
+    # ⭐ Step 3 — Otherwise process as new order
     inventory = [
         InventoryBatch(
             material_name="cotton",
@@ -88,16 +103,16 @@ def process_order(request: OrderRequest):
         )
     ]
 
-    # Temporary color mapping
     color_map = {
         "cotton": "blue",
         "polyester": "red"
     }
 
     result = process_customer_order(
-        request.message,
-        inventory,
-        color_map
+        message=request.message,
+        customer_phone=request.phone,
+        available_batches=inventory,
+        color_map=color_map
     )
 
     return result
