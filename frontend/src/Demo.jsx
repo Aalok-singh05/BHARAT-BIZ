@@ -114,7 +114,7 @@ const AgenticAICopilot = () => {
               </Link>
               <Link to="/signup">
                 <button className="px-5 py-2.5 bg-[#ff9f43] text-[#0a0808] rounded-lg font-bold hover:bg-[#ffb366] transition-all hover:scale-105 shadow-[0_0_15px_rgba(255,159,67,0.3)]">
-                  Start Free
+                  SignUp
                 </button>
               </Link>
             </div>
@@ -140,7 +140,7 @@ const AgenticAICopilot = () => {
 
         <div className="flex flex-col sm:flex-row gap-4 mb-20 animate-fadeInUp" style={{ animationDelay: '0.4s' }}>
           <button className="group px-8 py-4 bg-[#ff9f43] text-[#0a0808] rounded-xl font-bold text-lg hover:bg-[#ffb366] transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(255,159,67,0.4)]">
-            Start Free Trial
+            Signup
             <span className="inline-block ml-2 group-hover:translate-x-1 transition-transform">→</span>
           </button>
           <Link to="/Dashboard" className="px-8 py-4 glass-card rounded-xl font-bold text-lg hover:scale-105 transition-all flex items-center justify-center">
