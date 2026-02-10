@@ -1,21 +1,15 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-
 # Database & models
-
 from app.database import Base, engine
 import app.models  # IMPORTANT: loads all models
 
-
 # Scheduler
-
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.scheduler.reminders import check_overdue_customers
 
-
 # Services & business logic
-
 from app.services.order_extractor import extract_textile_order
 from app.services.order_processing_service import process_customer_order
 from app.services.negotiation_handler_service import handle_negotiation_message
@@ -25,66 +19,40 @@ from app.schemas.inventory_schema import InventoryBatch
 from app.workflows.order_states import OrderState
 
 
-# App initialization
+# ---------------- APP INIT ---------------- #
 
 app = FastAPI(title="Textile AI Backend")
 
 
-# Scheduler setup
+# ---------------- Scheduler ---------------- #
 
 scheduler = BackgroundScheduler()
-scheduler.add_job(
-    check_overdue_customers,
-    "interval",
-    days=1
-)
+scheduler.add_job(check_overdue_customers, "interval", days=1)
 scheduler.start()
 
 
-# Startup events
+# ---------------- Startup ---------------- #
 
 @app.on_event("startup")
 def on_startup():
     Base.metadata.create_all(bind=engine)
 
 
-# Schemas
+# ---------------- Schemas ---------------- #
 
 class OrderRequest(BaseModel):
     message: str
     phone: str
 
 
-# Routes
-@app.get("/")
-def root():
-    return {"status": "AI Textile Agent Running"}
+# ---------------- Test Inventory Builder ---------------- #
 
-@app.post("/extract-order")
-def extract_order(request: OrderRequest):
-    try:
-        items = extract_textile_order(request.message)
-        return {
-            "extracted_items": [dict(item) for item in items]
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+def build_test_inventory():
+    """
+    Temporary inventory until DB inventory is connected.
+    """
 
-@app.post("/process-order")
-def process_order(request: OrderRequest):
-
-    # ⭐ Step 1 — Check active session
-    session = get_active_session_by_phone(request.phone)
-
-    # ⭐ Step 2 — If negotiation ongoing → route to negotiation handler
-    if session and session.workflow_state == OrderState.CUSTOMER_NEGOTIATION:
-        return handle_negotiation_message(
-            customer_phone=request.phone,
-            message=request.message
-        )
-
-    # ⭐ Step 3 — Otherwise process as new order
-    inventory = [
+    return [
         InventoryBatch(
             material_name="cotton",
             color="blue",
@@ -103,16 +71,48 @@ def process_order(request: OrderRequest):
         )
     ]
 
-    color_map = {
-        "cotton": "blue",
-        "polyester": "red"
-    }
+
+# ---------------- Routes ---------------- #
+
+@app.get("/")
+def root():
+    return {"status": "AI Textile Agent Running"}
+
+
+@app.post("/extract-order")
+def extract_order(request: OrderRequest):
+    try:
+        items = extract_textile_order(request.message)
+
+        return {
+            "extracted_items": [dict(item) for item in items]
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/process-order")
+def process_order(request: OrderRequest):
+
+    # ⭐ Step 1 — Check active session
+    session = get_active_session_by_phone(request.phone)
+
+    # ⭐ Step 2 — Route to negotiation if active
+    if session and session.workflow_state == OrderState.CUSTOMER_NEGOTIATION:
+
+        return handle_negotiation_message(
+            customer_phone=request.phone,
+            message=request.message
+        )
+
+    # ⭐ Step 3 — Otherwise treat as new order
+    inventory = build_test_inventory()
 
     result = process_customer_order(
         message=request.message,
         customer_phone=request.phone,
-        available_batches=inventory,
-        color_map=color_map
+        available_batches=inventory
     )
 
     return result

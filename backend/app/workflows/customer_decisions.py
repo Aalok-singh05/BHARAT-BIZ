@@ -7,3 +7,4 @@ class CustomerDecision(str, Enum):
     CANCEL_ITEM = "cancel_item"
     REQUEST_ALTERNATIVE = "request_alternative"
     UNKNOWN = "unknown"
+    EDIT_ITEM='edit_item'

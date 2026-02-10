@@ -23,25 +23,32 @@ def process_customer_order(
 
     extracted_items = extract_textile_order(message)
 
-    # ⭐ Create Order Session after successful extraction
+    # Create Order Session after successful extraction
     session = create_order_session(customer_phone, extracted_items)
 
+    session.available_batches = available_batches
+    
     responses = []
     negotiation_required = False
 
-    for item in extracted_items:
+    for session_item in session.items:
 
-        # ⭐ NEW — Color comes from extracted item
-        color = item.color
+        measurement = session_item.measurement
+        color = measurement.color
 
         inventory_result = check_inventory(
-            item,
+            measurement,
             available_batches,
             color
         )
 
+        # STORE INVENTORY MEMORY
+        session_item.inventory_status = inventory_result["status"]
+        session_item.available_meters = inventory_result["available_meters"]
+        session_item.fulfilled_batches = inventory_result["fulfilled_batches"]
+
         negotiation_response = generate_inventory_response(
-            item,
+            measurement,
             inventory_result,
             color
         )
@@ -50,7 +57,7 @@ def process_customer_order(
             negotiation_required = True
 
         responses.append({
-            "material": item.material_name,
+            "material": measurement.material_name,
             "color": color,
             "response": negotiation_response
         })
