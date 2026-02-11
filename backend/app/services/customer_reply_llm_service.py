@@ -48,3 +48,33 @@ Customer Message:
     parsed = json.loads(raw_output)
 
     return parsed
+
+FINAL_PROMPT_PATH = Path("app/prompts/final_confirmation_prompt.txt")
+
+def classify_final_confirmation_intent(message: str):
+
+    llm = get_llm()
+
+    with open(FINAL_PROMPT_PATH, "r") as file:
+        prompt_template = file.read()
+
+    full_prompt = f"""
+{prompt_template}
+
+Customer Message:
+{message}
+"""
+
+    response = llm.invoke(full_prompt)
+
+    raw_output = response.content.strip()
+
+    if raw_output.startswith("```"):
+        raw_output = raw_output.split("```")[1]
+
+    if raw_output.startswith("json"):
+        raw_output = raw_output[4:].strip()
+
+    parsed = json.loads(raw_output)
+
+    return parsed.get("global_intent", "unclear")

@@ -17,6 +17,9 @@ from app.services.order_session_manager import get_active_session_by_phone
 
 from app.schemas.inventory_schema import InventoryBatch
 from app.workflows.order_states import OrderState
+from app.services.final_confirmation_handler_service import (
+    handle_final_confirmation_message
+)
 
 
 # ---------------- APP INIT ---------------- #
@@ -98,7 +101,10 @@ def process_order(request: OrderRequest):
     # ⭐ Step 1 — Check active session
     session = get_active_session_by_phone(request.phone)
 
-    # ⭐ Step 2 — Route to negotiation if active
+    # -------------------------------------------------
+    # ⭐ NEGOTIATION ROUTE
+    # -------------------------------------------------
+
     if session and session.workflow_state == OrderState.CUSTOMER_NEGOTIATION:
 
         return handle_negotiation_message(
@@ -106,7 +112,21 @@ def process_order(request: OrderRequest):
             message=request.message
         )
 
-    # ⭐ Step 3 — Otherwise treat as new order
+    # -------------------------------------------------
+    # ⭐ FINAL CONFIRMATION ROUTE (NEW)
+    # -------------------------------------------------
+
+    if session and session.workflow_state == OrderState.FINAL_CUSTOMER_CONFIRMATION:
+
+        return handle_final_confirmation_message(
+            customer_phone=request.phone,
+            message=request.message
+        )
+
+    # -------------------------------------------------
+    # ⭐ NEW ORDER ROUTE
+    # -------------------------------------------------
+
     inventory = build_test_inventory()
 
     result = process_customer_order(
@@ -116,3 +136,4 @@ def process_order(request: OrderRequest):
     )
 
     return result
+

@@ -1,4 +1,5 @@
 from typing import List, Dict
+from app.services.negotiation_handler_service import build_final_summary
 
 from app.services.order_extractor import extract_textile_order
 from app.services.inventory_service import check_inventory
@@ -53,7 +54,7 @@ def process_customer_order(
             color
         )
 
-        if negotiation_response["next_step"] == "CUSTOMER_NEGOTIATION":
+        if negotiation_response["next_step"] in "CUSTOMER_NEGOTIATION":
             negotiation_required = True
 
         responses.append({
@@ -63,14 +64,24 @@ def process_customer_order(
         })
 
     if negotiation_required:
-        update_workflow_state(session.order_id, OrderState.CUSTOMER_NEGOTIATION)
-        set_negotiation_pending(session.order_id, True)
+
+        update_workflow_state(
+            session.order_id,
+            OrderState.CUSTOMER_NEGOTIATION
+        )
+    
     
     else:
-        update_workflow_state(session.order_id, OrderState.WAITING_OWNER_CONFIRMATION)
 
-    return {
-        "order_id": session.order_id,
-        "workflow_state": session.workflow_state,
-        "responses": responses
-    }
+        # ⭐ Move to FINAL CUSTOMER CONFIRMATION instead
+        update_workflow_state(
+            session.order_id,
+            OrderState.FINAL_CUSTOMER_CONFIRMATION
+        )
+
+        summary_message = build_final_summary(session)
+        return {
+            "order_id": session.order_id,
+            "workflow_state": session.workflow_state,
+            "responses": responses
+        }

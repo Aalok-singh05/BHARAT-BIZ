@@ -39,7 +39,7 @@ def generate_inventory_response(order_item: TextileMeasurement,
             f"{color} {material} abhi stock mein available nahi hai."
         )
 
-        next_step = "CUSTOMER_NEGOTIATION"
+        next_step = "OUT_OF_STOCK"
 
     return {
         "message": message,

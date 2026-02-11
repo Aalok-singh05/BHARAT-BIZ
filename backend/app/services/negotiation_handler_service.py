@@ -8,17 +8,17 @@ from app.services.order_session_manager import (
     get_active_session_by_phone,
     update_workflow_state
 )
+
 from app.workflows.order_states import OrderState
 from app.workflows.order_item_status import OrderItemStatus
 
 from app.services.inventory_service import check_inventory
 from app.services.negotiation_service import generate_inventory_response
 
-from app.services.alternative_suggestion_service import (
+from app.services.alternative_service import (
     find_alternatives,
     build_alternative_message
 )
-
 
 # -------------------------------------------------
 # FINAL ORDER SUMMARY BUILDER
@@ -43,9 +43,8 @@ def build_final_summary(session):
         "Please confirm if we should proceed with this order."
     )
 
-
 # -------------------------------------------------
-# GET PENDING (NEGOTIATING) ITEMS
+# GET PENDING ITEMS
 # -------------------------------------------------
 
 def get_pending_items(session):
@@ -55,9 +54,8 @@ def get_pending_items(session):
         if item.status == OrderItemStatus.NEGOTIATING
     ]
 
-
 # -------------------------------------------------
-# BUILD PENDING NEGOTIATION MESSAGE (CTA ONCE)
+# BUILD NEGOTIATION MESSAGE
 # -------------------------------------------------
 
 def build_pending_negotiation_message(session, pending_items):
@@ -66,32 +64,49 @@ def build_pending_negotiation_message(session, pending_items):
 
     for item in pending_items:
 
-        # ⭐ Only process negotiating items
         if item.status != OrderItemStatus.NEGOTIATING:
             continue
 
         measurement = item.measurement
 
-        # ⭐ If customer requested alternatives
-        if getattr(item, "inventory_status", None) in ["PARTIAL_AVAILABLE", "OUT_OF_STOCK"]:
+        # -------------------------------------------------
+        # ⭐ ONLY OUT OF STOCK → Alternative Suggestions
+        # -------------------------------------------------
+
+        if item.inventory_status == "OUT_OF_STOCK":
+
             alternatives = find_alternatives(session, item)
-            alt_message = build_alternative_message(item, alternatives)
+
+            alt_message = build_alternative_message(
+                item,
+                alternatives
+            )
+
             pending_messages.append(alt_message)
             continue
 
-        # ⭐ Prefer stored inventory result
-        if getattr(item, "inventory_status", None):
+        # -------------------------------------------------
+        # ⭐ USE STORED INVENTORY MEMORY
+        # -------------------------------------------------
+
+        if item.inventory_status:
+
             inventory_result = {
                 "status": item.inventory_status,
-                "available_meters": getattr(item, "available_meters", 0),
-                "fulfilled_batches": getattr(item, "fulfilled_batches", [])
+                "available_meters": item.available_meters or 0,
+                "fulfilled_batches": item.fulfilled_batches or []
             }
+
         else:
             inventory_result = check_inventory(
                 measurement,
-                getattr(session, "available_batches", []),
+                session.available_batches or [],
                 measurement.color
             )
+
+        # -------------------------------------------------
+        # ⭐ NORMAL NEGOTIATION RESPONSE
+        # -------------------------------------------------
 
         negotiation_response = generate_inventory_response(
             measurement,
@@ -101,7 +116,7 @@ def build_pending_negotiation_message(session, pending_items):
 
         message = negotiation_response["message"]
 
-        # ⭐ Remove duplicate CTA safely
+        # Remove duplicate CTA
         if "Aap kya karna chahenge?" in message:
             message = message.split("Aap kya karna chahenge?")[0].strip()
 
@@ -110,7 +125,6 @@ def build_pending_negotiation_message(session, pending_items):
     combined_message = "\n\n".join(pending_messages)
 
     return combined_message + "\n\nAap kya karna chahenge?"
-
 
 # -------------------------------------------------
 # MAIN NEGOTIATION HANDLER
@@ -126,26 +140,47 @@ def handle_negotiation_message(customer_phone: str, message: str):
     if session.workflow_state != OrderState.CUSTOMER_NEGOTIATION:
         return {"message": "Order is not in negotiation stage."}
 
-    # ⭐ Step 1 — Classify customer reply
+    # -------------------------------------------------
+    # STEP 1 — LLM CLASSIFICATION
+    # -------------------------------------------------
+
     decision_output = classify_customer_reply(
         message,
         [item.measurement for item in session.items]
     )
 
-    # ⭐ Step 2 — Apply decisions
+    # -------------------------------------------------
+    # STEP 2 — APPLY DECISIONS
+    # -------------------------------------------------
+
     apply_customer_decisions(session, decision_output)
 
-    # ⭐ Step 3 — Evaluate outcomes
+    # -------------------------------------------------
+    # STEP 3 — FULL ORDER CANCEL
+    # -------------------------------------------------
 
     if all_items_cancelled(session):
-        update_workflow_state(session.order_id, OrderState.ORDER_COMPLETED)
+
+        update_workflow_state(
+            session.order_id,
+            OrderState.ORDER_COMPLETED
+        )
 
         return {
             "message": "Order cancelled successfully.",
             "awaiting_customer_confirmation": False
         }
 
+    # -------------------------------------------------
+    # STEP 4 — ALL ITEMS RESOLVED
+    # -------------------------------------------------
+
     if all_items_resolved(session):
+
+        update_workflow_state(
+            session.order_id,
+            OrderState.FINAL_CUSTOMER_CONFIRMATION
+        )
 
         summary_message = build_final_summary(session)
 
@@ -154,7 +189,9 @@ def handle_negotiation_message(customer_phone: str, message: str):
             "awaiting_customer_confirmation": True
         }
 
-    # ⭐ Step 4 — Negotiation still active
+    # -------------------------------------------------
+    # STEP 5 — NEGOTIATION CONTINUES
+    # -------------------------------------------------
 
     pending_items = get_pending_items(session)
 
