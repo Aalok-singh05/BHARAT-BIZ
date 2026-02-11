@@ -14,6 +14,11 @@ from app.workflows.order_item_status import OrderItemStatus
 from app.services.inventory_service import check_inventory
 from app.services.negotiation_service import generate_inventory_response
 
+from app.services.alternative_suggestion_service import (
+    find_alternatives,
+    build_alternative_message
+)
+
 
 # -------------------------------------------------
 # FINAL ORDER SUMMARY BUILDER
@@ -61,13 +66,32 @@ def build_pending_negotiation_message(session, pending_items):
 
     for item in pending_items:
 
+        # ⭐ Only process negotiating items
+        if item.status != OrderItemStatus.NEGOTIATING:
+            continue
+
         measurement = item.measurement
 
-        inventory_result = check_inventory(
-            measurement,
-            getattr(session, "available_batches", []),
-            measurement.color
-        )
+        # ⭐ If customer requested alternatives
+        if getattr(item, "inventory_status", None) in ["PARTIAL_AVAILABLE", "OUT_OF_STOCK"]:
+            alternatives = find_alternatives(session, item)
+            alt_message = build_alternative_message(item, alternatives)
+            pending_messages.append(alt_message)
+            continue
+
+        # ⭐ Prefer stored inventory result
+        if getattr(item, "inventory_status", None):
+            inventory_result = {
+                "status": item.inventory_status,
+                "available_meters": getattr(item, "available_meters", 0),
+                "fulfilled_batches": getattr(item, "fulfilled_batches", [])
+            }
+        else:
+            inventory_result = check_inventory(
+                measurement,
+                getattr(session, "available_batches", []),
+                measurement.color
+            )
 
         negotiation_response = generate_inventory_response(
             measurement,
@@ -75,16 +99,17 @@ def build_pending_negotiation_message(session, pending_items):
             measurement.color
         )
 
-        # Remove repeated CTA if exists
-        base_message = negotiation_response["message"].split(
-            "Aap kya karna chahenge?"
-        )[0].strip()
+        message = negotiation_response["message"]
 
-        pending_messages.append(base_message)
+        # ⭐ Remove duplicate CTA safely
+        if "Aap kya karna chahenge?" in message:
+            message = message.split("Aap kya karna chahenge?")[0].strip()
 
-    combined = "\n\n".join(pending_messages)
+        pending_messages.append(message)
 
-    return combined + "\n\nAap kya karna chahenge?"
+    combined_message = "\n\n".join(pending_messages)
+
+    return combined_message + "\n\nAap kya karna chahenge?"
 
 
 # -------------------------------------------------
