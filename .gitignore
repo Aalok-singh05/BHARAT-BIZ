@@ -38,7 +38,6 @@ wandb/
 mlruns/
 logs/
 checkpoints/
-models/
 data/
 datasets/
 
@@ -90,3 +89,6 @@ docker-compose.override.yml
 *.tmp
 *.swp
 *.swo
+
+backend/app/invoices
+

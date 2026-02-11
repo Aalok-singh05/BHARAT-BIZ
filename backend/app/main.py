@@ -1,5 +1,7 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
+import os
 
 # Database & models
 from app.database import Base, engine
@@ -14,12 +16,17 @@ from app.services.order_extractor import extract_textile_order
 from app.services.order_processing_service import process_customer_order
 from app.services.negotiation_handler_service import handle_negotiation_message
 from app.services.order_session_manager import get_active_session_by_phone
+from app.integrations.whatsapp import send_whatsapp_message
 
 from app.schemas.inventory_schema import InventoryBatch
 from app.workflows.order_states import OrderState
 from app.services.final_confirmation_handler_service import (
     handle_final_confirmation_message
 )
+from app.router.message_router import route_message
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 # ---------------- APP INIT ---------------- #
@@ -30,7 +37,7 @@ app = FastAPI(title="Textile AI Backend")
 # ---------------- Scheduler ---------------- #
 
 scheduler = BackgroundScheduler()
-scheduler.add_job(check_overdue_customers, "interval", days=1)
+scheduler.add_job(check_overdue_customers, "interval", days=7)
 scheduler.start()
 
 
@@ -137,3 +144,67 @@ def process_order(request: OrderRequest):
 
     return result
 
+VERIFY_TOKEN = os.getenv("WEBHOOK_VERIFY_TOKEN")
+
+@app.get("/webhook")
+async def verify_webhook(request: Request):
+    params = request.query_params
+
+    mode = params.get("hub.mode")
+    token = params.get("hub.verify_token")
+    challenge = params.get("hub.challenge")
+
+    if mode == "subscribe" and token == VERIFY_TOKEN:
+        return PlainTextResponse(content=challenge)
+
+    return PlainTextResponse(content="Verification failed", status_code=403)
+
+
+from app.database import SessionLocal
+from app.models.message import Message
+
+@app.post("/webhook")
+async def receive_message(request: Request):
+    body = await request.json()
+
+    try:
+        entry = body["entry"][0]
+        changes = entry["changes"][0]
+        value = changes["value"]
+
+        if "messages" in value:
+            msg = value["messages"][0]
+
+            phone = msg["from"]
+            text = msg["text"]["body"]
+            message_id = msg["id"]
+            timestamp = msg["timestamp"]
+
+            db = SessionLocal()
+
+            # 🔐 Prevent duplicate processing
+            existing = db.query(Message).filter_by(message_id=message_id).first()
+            if existing:
+                db.close()
+                return {"status": "duplicate"}
+
+            new_message = Message(
+                message_id=message_id,
+                phone_number=phone,
+                direction="incoming",
+                content=text
+            )
+
+            db.add(new_message)
+            db.commit()
+            db.close()
+
+            print("Message stored:", phone, text)
+
+            response_text = route_message(phone, text)
+            send_whatsapp_message(phone, response_text)
+
+    except Exception as e:
+        print("Webhook error:", e)
+
+    return {"status": "received"}
