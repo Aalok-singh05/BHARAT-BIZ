@@ -12,6 +12,8 @@ import AuthPage from './AuthPage.jsx';
 import ApprovalQueue from './ApprovalQueue.jsx';
 import PaymentRecorder from './PaymentRecorder.jsx';
 
+import Profile from './profile.jsx';
+
 function App() {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -46,6 +48,7 @@ function App() {
             <Route path="/documents" element={<Document />} />
             <Route path="/business-memory" element={<BusinessMemory />} />
             <Route path="/inventory" element={<InventoryManagement />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/dashboard" element={<MerchantDashboard />} />
             <Route path="/approvals" element={<ApprovalQueue />} />
             <Route path="/payments" element={<PaymentRecorder />} />

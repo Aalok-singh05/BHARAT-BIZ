@@ -63,17 +63,24 @@ const Sidebar = ({ isExpanded, setIsExpanded }) => {
         ))}
       </nav>
 
-      {/* Footer Section */}
+      {/* Footer Section - Profile Link */}
       <div className="absolute bottom-8 left-0 w-full px-4">
-        <div className={`flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 ${!isExpanded ? 'justify-center' : ''}`}>
-          <div className="w-8 h-8 rounded-full bg-[#ff9f43] flex items-center justify-center font-bold text-[#0a0808] text-xs">JD</div>
+        <Link 
+          to="/profile" 
+          className={`flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-[#ff9f43]/10 hover:border-[#ff9f43]/20 transition-all group ${!isExpanded ? 'justify-center' : ''}`}
+        >
+          <div className="w-8 h-8 rounded-full bg-[#ff9f43] flex items-center justify-center font-bold text-[#0a0808] text-xs group-hover:scale-110 transition-transform">
+            P
+          </div>
+          
           {isExpanded && (
-            <div className="flex flex-col animate-fadeInUp text-left">
-              <span className="text-xs font-bold text-[#f5f3f0]">Jai's Shop</span>
-              <span className="text-[10px] text-[#a89d94]">Premium Plan</span>
+            <div className="flex flex-col animate-fadeInUp text-left overflow-hidden">
+              <span className="text-xs font-bold text-[#f5f3f0] group-hover:text-[#ff9f43] transition-colors truncate">
+                My Profile
+              </span>
             </div>
           )}
-        </div>
+        </Link>
       </div>
     </aside>
   );
