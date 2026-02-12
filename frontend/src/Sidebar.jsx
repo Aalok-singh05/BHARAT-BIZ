@@ -5,14 +5,16 @@ import { Link } from 'react-router';
 const Sidebar = ({ isExpanded, setIsExpanded }) => {
   const navItems = [
     { name: 'Home', icon: '🏠', path: '/' },
-    { name: 'Dashboard', icon: '📊', path: '/Dashboard' }, // Adjusted path case to match App.js
+    { name: 'Dashboard', icon: '📊', path: '/Dashboard' },
+    { name: 'Approvals', icon: '✅', path: '/approvals' },
+    { name: 'Payments', icon: '💰', path: '/payments' },
     { name: 'Documents', icon: '📄', path: '/documents' },
-    { name: 'Business Memory', icon: '🧠', path: '/business-memory' }, // Adjusted path to match App.js
+    { name: 'Business Memory', icon: '🧠', path: '/business-memory' },
     { name: 'Inventory', icon: '📦', path: '/inventory' },
   ];
 
   return (
-    <aside 
+    <aside
       className={`fixed left-0 top-0 h-full z-[100] transition-all duration-500 ease-in-out border-r border-[#ff9f43]/10 glass-card backdrop-blur-2xl
         ${isExpanded ? 'w-72' : 'w-20'}`}
     >
@@ -20,7 +22,7 @@ const Sidebar = ({ isExpanded, setIsExpanded }) => {
 
       {/* Header / Toggle Button */}
       <div className="p-6 mb-8 flex items-center gap-4">
-        <button 
+        <button
           onClick={() => setIsExpanded(!isExpanded)}
           className="w-10 h-10 flex flex-col justify-center items-center gap-1.5 hover:bg-white/5 rounded-xl transition-all group"
           aria-label="Toggle Sidebar"
@@ -29,7 +31,7 @@ const Sidebar = ({ isExpanded, setIsExpanded }) => {
           <div className={`h-0.5 bg-[#ff9f43] transition-all duration-300 ${isExpanded ? 'w-4' : 'w-5 group-hover:w-6'}`} />
           <div className={`h-0.5 bg-[#ff9f43] transition-all duration-300 ${isExpanded ? 'w-6' : 'w-5 group-hover:w-6'}`} />
         </button>
-        
+
         {isExpanded && (
           <span className="text-xl font-bold gradient-text animate-fadeInUp">
             Helper AI
@@ -51,7 +53,7 @@ const Sidebar = ({ isExpanded, setIsExpanded }) => {
             <span className="text-xl group-hover:scale-110 transition-transform">
               {item.icon}
             </span>
-            
+
             {isExpanded && (
               <span className="text-sm font-semibold text-[#a89d94] group-hover:text-[#f5f3f0] transition-colors whitespace-nowrap overflow-hidden animate-fadeInUp">
                 {item.name}

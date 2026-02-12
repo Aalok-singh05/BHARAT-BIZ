@@ -9,6 +9,8 @@ import MerchantDashboard from './Dashboard.jsx';
 import Sidebar from './Sidebar.jsx';
 import Agenticchat from './AgenticChat.jsx';
 import AuthPage from './AuthPage.jsx';
+import ApprovalQueue from './ApprovalQueue.jsx';
+import PaymentRecorder from './PaymentRecorder.jsx';
 
 function App() {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -23,7 +25,7 @@ function App() {
 
   return (
     <div className="App flex min-h-screen bg-[#0a0808] overflow-x-hidden">
-      
+
       {/* Sidebar */}
       {shouldShowSidebar && (
         <div className="leftSection fixed h-full z-50">
@@ -33,11 +35,10 @@ function App() {
 
       {/* Main Content */}
       <div
-        className={`rightSection flex-1 transition-all duration-500 ease-in-out min-w-0 ${
-          shouldShowSidebar
+        className={`rightSection flex-1 transition-all duration-500 ease-in-out min-w-0 ${shouldShowSidebar
             ? (isExpanded ? 'ml-72' : 'ml-20')
             : 'w-full'
-        }`}
+          }`}
       >
         <div className={shouldShowSidebar ? 'p-4 md:p-8' : ''}>
           <Routes>
@@ -46,6 +47,8 @@ function App() {
             <Route path="/business-memory" element={<BusinessMemory />} />
             <Route path="/inventory" element={<InventoryManagement />} />
             <Route path="/dashboard" element={<MerchantDashboard />} />
+            <Route path="/approvals" element={<ApprovalQueue />} />
+            <Route path="/payments" element={<PaymentRecorder />} />
             <Route path="/login" element={<AuthPage mode="login" />} />
             <Route path="/signup" element={<AuthPage mode="signup" />} />
             <Route path="/AgenticChat" element={<Agenticchat />} />

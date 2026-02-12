@@ -1,109 +1,114 @@
+"""
+Central message router.
+Receives incoming WhatsApp messages and dispatches to the correct handler
+based on the current DB-backed workflow state.
+
+This module is a *dispatcher only* — no business logic lives here.
+"""
+
 from app.database import SessionLocal
-from app.models.order import Order
-from app.models.conversation_state import ConversationState
+
+from app.services.order_processing_service import process_customer_order
+from app.services.negotiation_handler_service import handle_negotiation_message
+from app.services.final_confirmation_handler_service import (
+    handle_final_confirmation_message
+)
+from app.services.order_session_manager import get_active_session_by_phone
+
+from app.workflows.order_states import OrderState
+from app.schemas.inventory_schema import InventoryBatch
 
 
-def route_message(phone: str, message: str):
-    """
-    Central routing entry point.
-    WhatsApp layer must ONLY call this function.
-    """
+# ---------------------------------------------------------
+# MAIN ROUTER ENTRY
+# ---------------------------------------------------------
+
+def route_message(phone: str, message: str) -> str:
 
     db = SessionLocal()
 
     try:
-        # 🔎 Step 1: Find latest order for this phone
-        order = (
-            db.query(Order)
-            .filter(Order.customer_phone == phone)
-            .order_by(Order.created_at.desc())
-            .first()
+        session = get_active_session_by_phone(db, phone)
+
+        # -------------------------------------------------
+        # 1️⃣ NEGOTIATION FLOW
+        # -------------------------------------------------
+        if session and session.workflow_state == OrderState.CUSTOMER_NEGOTIATION:
+
+            result = handle_negotiation_message(
+                db=db,
+                customer_phone=phone,
+                message=message
+            )
+
+            return result.get("message", "Processing...")
+
+        # -------------------------------------------------
+        # 2️⃣ FINAL CONFIRMATION FLOW
+        # -------------------------------------------------
+        if session and session.workflow_state == OrderState.FINAL_CUSTOMER_CONFIRMATION:
+
+            result = handle_final_confirmation_message(
+                db=db,
+                customer_phone=phone,
+                message=message
+            )
+
+            return result.get("message", "Processing...")
+
+        # -------------------------------------------------
+        # 3️⃣ NEW ORDER FLOW
+        # -------------------------------------------------
+
+        inventory_batches = get_all_inventory_batches(db)
+
+        result = process_customer_order(
+            db=db,
+            message=message,
+            customer_phone=phone,
+            available_batches=inventory_batches
         )
 
-        # 🆕 No order exists → new customer flow
-        if not order:
-            return handle_new_customer(phone, message)
+        # Extract first response message safely
+        if "responses" in result and result["responses"]:
+            first = result["responses"][0]
+            return first.get("response", {}).get(
+                "message",
+                "Processing your request."
+            )
 
-        # 🔎 Step 2: Fetch conversation state linked to order
-        state = (
-            db.query(ConversationState)
-            .filter(ConversationState.order_id == order.order_id)
-            .first()
-        )
-
-        # If somehow no state exists yet → treat as new flow
-        if not state:
-            return handle_new_customer(phone, message)
-
-        # 🤝 Negotiation ongoing
-        if state.negotiation_pending:
-            return handle_negotiation(phone, message)
-
-        # 🧾 Awaiting owner approval
-        if state.awaiting_owner_confirmation:
-            return handle_owner_pending(phone, message)
-
-        # 📦 Default standard flow
-        return handle_standard_message(phone, message)
+        return "Processing your request."
 
     finally:
         db.close()
 
 
-# -----------------------------------------------------
-# Temporary Placeholder Handlers
-# These will later connect to Dev-1 AI logic
-# -----------------------------------------------------
+# ---------------------------------------------------------
+# INVENTORY FETCHER
+# ---------------------------------------------------------
 
-from app.crud.customer import get_or_create_customer
-from app.crud.order import create_order
-from app.models.conversation_state import ConversationState
+def get_all_inventory_batches(db):
+    """
+    Fetch DB inventory and convert to schema
+    expected by Dev-1 logic.
+    """
 
+    from app.models.inventory import InventoryBatch as DBBatch
 
-def handle_new_customer(phone, message):
-    print("Flow: NEW CUSTOMER")
+    batches = db.query(DBBatch).all()
 
-    db = SessionLocal()
+    converted = []
 
-    try:
-        # 1️⃣ Create or get customer
-        customer = get_or_create_customer(
-            db,
-            phone_number=phone,
-            business_name=None
+    for batch in batches:
+        converted.append(
+            InventoryBatch(
+                material_name=batch.material.material_name,
+                color=batch.color,
+                batch_id=str(batch.batch_id),
+                rolls_available=batch.rolls_available,
+                meters_per_roll=batch.meters_per_roll,
+                loose_meters_available=batch.loose_meters_available
+            )
         )
 
-        # 2️⃣ Create new order
-        order = create_order(db, customer.phone_number)
-
-        # 3️⃣ Create conversation state
-        state = ConversationState(
-            order_id=order.order_id,
-            workflow_state="collecting_items",
-            negotiation_pending=False,
-            awaiting_owner_confirmation=False,
-            last_customer_language="unknown"
-        )
-
-        db.add(state)
-        db.commit()
-
-        return "Welcome! Please tell me what material, color, and quantity you need."
-
-    finally:
-        db.close()
-
-
-def handle_negotiation(phone, message):
-    print("Flow: NEGOTIATION")
-    return f"Noted. Let me check that for you."
-
-
-def handle_owner_pending(phone, message):
-    print("Flow: OWNER APPROVAL PENDING")
-    return f"Your order is awaiting confirmation. I will update you soon."
-
-
-def handle_standard_message(phone, message):
-    print("Flow: STANDARD")
-    return f"Processing your request."
+    return converted

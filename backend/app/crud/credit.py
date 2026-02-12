@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.models.credit_ledger import CreditLedger
 from app.models.customer import Customer
 
+
 def add_credit_for_invoice(
     db: Session,
     customer_phone: str,
@@ -12,6 +13,7 @@ def add_credit_for_invoice(
 ):
     """
     Adds a CREDIT entry when an invoice is generated.
+    Caller manages db.commit().
     """
 
     entry = CreditLedger(
@@ -22,12 +24,13 @@ def add_credit_for_invoice(
     )
 
     db.add(entry)
-    db.commit()
+    db.flush()
     db.refresh(entry)
 
     recalculate_outstanding_balance(db, customer_phone)
 
     return entry
+
 
 def add_payment(
     db: Session,
@@ -36,7 +39,27 @@ def add_payment(
 ):
     """
     Records a payment made by customer.
+    Includes overpayment prevention.
+    Caller manages db.commit().
     """
+
+    # Prevent overpayment
+    customer = (
+        db.query(Customer)
+        .filter(Customer.phone_number == customer_phone)
+        .first()
+    )
+
+    if not customer:
+        raise ValueError("Customer not found")
+
+    if customer.outstanding_balance <= 0:
+        raise ValueError("No outstanding balance to settle")
+
+    if amount > customer.outstanding_balance:
+        raise ValueError(
+            f"Payment ₹{amount} exceeds outstanding ₹{customer.outstanding_balance}"
+        )
 
     entry = CreditLedger(
         customer_phone=customer_phone,
@@ -46,12 +69,13 @@ def add_payment(
     )
 
     db.add(entry)
-    db.commit()
+    db.flush()
     db.refresh(entry)
 
     recalculate_outstanding_balance(db, customer_phone)
 
     return entry
+
 
 def recalculate_outstanding_balance(
     db: Session,
@@ -91,7 +115,7 @@ def recalculate_outstanding_balance(
 
     customer.outstanding_balance = outstanding
 
-    db.commit()
+    db.flush()
     db.refresh(customer)
 
     return outstanding

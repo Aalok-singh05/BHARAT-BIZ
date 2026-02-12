@@ -1,3 +1,4 @@
+from sqlalchemy.orm import Session
 from typing import List
 
 from app.services.customer_reply_llm_service import (
@@ -8,7 +9,8 @@ from app.services.customer_reply_llm_service import (
 from app.services.order_update_service import apply_customer_decisions
 from app.services.order_session_manager import (
     get_active_session_by_phone,
-    update_workflow_state
+    update_workflow_state,
+    sync_session_items_to_db
 )
 
 from app.services.order_extractor import extract_textile_order
@@ -104,9 +106,9 @@ def get_active_items(session):
 # MAIN FINAL CONFIRMATION HANDLER
 # -------------------------------------------------
 
-def handle_final_confirmation_message(customer_phone: str, message: str):
+def handle_final_confirmation_message(db: Session, customer_phone: str, message: str):
 
-    session = get_active_session_by_phone(customer_phone)
+    session = get_active_session_by_phone(db, customer_phone)
 
     if not session:
         return {"message": "No active order found."}
@@ -128,10 +130,14 @@ def handle_final_confirmation_message(customer_phone: str, message: str):
 
         cancel_entire_order(session)
 
+        sync_session_items_to_db(db, session)
         update_workflow_state(
+            db,
             session.order_id,
             OrderState.ORDER_COMPLETED
         )
+
+        db.commit() # Atomic commit
 
         return {
             "message": "Order cancel kar diya gaya hai.",
@@ -145,9 +151,12 @@ def handle_final_confirmation_message(customer_phone: str, message: str):
     if global_intent == "confirm_order":
 
         update_workflow_state(
+            db,
             session.order_id,
             OrderState.WAITING_OWNER_CONFIRMATION
         )
+
+        db.commit() # Atomic commit
 
         return {
             "message": "Order confirm ho gaya hai. Owner approval ke liye bhej diya gaya hai.",
@@ -177,7 +186,9 @@ def handle_final_confirmation_message(customer_phone: str, message: str):
         # If new negotiation needed → go back to negotiation stage
         if negotiation_required(session):
 
+            sync_session_items_to_db(db, session)
             update_workflow_state(
+                db,
                 session.order_id,
                 OrderState.CUSTOMER_NEGOTIATION
             )
@@ -189,13 +200,18 @@ def handle_final_confirmation_message(customer_phone: str, message: str):
                 pending_items
             )
 
+            db.commit() # Atomic commit
+
             return {
                 "message": pending_message,
                 "awaiting_customer_confirmation": False
             }
 
         # If everything still valid → rebuild summary
+        sync_session_items_to_db(db, session)
         summary_message = build_final_summary(session)
+
+        db.commit() # Atomic commit
 
         return {
             "message": summary_message,

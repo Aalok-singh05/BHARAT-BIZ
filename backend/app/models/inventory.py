@@ -2,6 +2,7 @@ import uuid
 from sqlalchemy import Column, String, Integer, Numeric, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 from app.database import Base
 
 
@@ -15,6 +16,9 @@ class InventoryBatch(Base):
         ForeignKey("materials.material_id"),
         nullable=False
     )
+
+    # ✅ ADD THIS RELATIONSHIP
+    material = relationship("Material")
 
     color = Column(String, nullable=False)
     dye_lot = Column(String, nullable=True)

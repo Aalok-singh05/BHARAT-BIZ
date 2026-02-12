@@ -1,4 +1,6 @@
 from typing import List, Dict
+from sqlalchemy.orm import Session
+
 from app.services.negotiation_handler_service import build_final_summary
 
 from app.services.order_extractor import extract_textile_order
@@ -7,7 +9,8 @@ from app.services.negotiation_service import generate_inventory_response
 from app.services.order_session_manager import (
     create_order_session,
     update_workflow_state,
-    set_negotiation_pending
+    set_negotiation_pending,
+    sync_session_items_to_db
 )
 
 from app.schemas.inventory_schema import InventoryBatch
@@ -15,17 +18,18 @@ from app.workflows.order_states import OrderState
 
 
 def process_customer_order(
+    db: Session,
     message: str,
     customer_phone: str,
     available_batches: List[InventoryBatch]) -> Dict:
     """
-    Full order processing pipeline with OrderSession creation.
+    Full order processing pipeline with DB-backed OrderSession.
     """
 
     extracted_items = extract_textile_order(message)
 
-    # Create Order Session after successful extraction
-    session = create_order_session(customer_phone, extracted_items)
+    # Create DB-backed Order Session after successful extraction
+    session = create_order_session(db, customer_phone, extracted_items)
 
     session.available_batches = available_batches
     
@@ -65,7 +69,9 @@ def process_customer_order(
 
     if negotiation_required:
 
+        sync_session_items_to_db(db, session)
         update_workflow_state(
+            db,
             session.order_id,
             OrderState.CUSTOMER_NEGOTIATION
         )
@@ -74,12 +80,17 @@ def process_customer_order(
     else:
 
         # ⭐ Move to FINAL CUSTOMER CONFIRMATION instead
+        sync_session_items_to_db(db, session)
         update_workflow_state(
+            db,
             session.order_id,
             OrderState.FINAL_CUSTOMER_CONFIRMATION
         )
 
         summary_message = build_final_summary(session)
+        
+        db.commit() # Atomic commit
+
         return {
             "order_id": session.order_id,
             "workflow_state": session.workflow_state,

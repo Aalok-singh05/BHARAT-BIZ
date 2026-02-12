@@ -1,3 +1,5 @@
+from sqlalchemy.orm import Session
+
 from app.services.customer_reply_llm_service import classify_customer_reply
 from app.services.order_update_service import (
     apply_customer_decisions,
@@ -6,7 +8,8 @@ from app.services.order_update_service import (
 )
 from app.services.order_session_manager import (
     get_active_session_by_phone,
-    update_workflow_state
+    update_workflow_state,
+    sync_session_items_to_db
 )
 
 from app.workflows.order_states import OrderState
@@ -130,9 +133,9 @@ def build_pending_negotiation_message(session, pending_items):
 # MAIN NEGOTIATION HANDLER
 # -------------------------------------------------
 
-def handle_negotiation_message(customer_phone: str, message: str):
+def handle_negotiation_message(db: Session, customer_phone: str, message: str):
 
-    session = get_active_session_by_phone(customer_phone)
+    session = get_active_session_by_phone(db, customer_phone)
 
     if not session:
         return {"message": "No active order found."}
@@ -161,10 +164,14 @@ def handle_negotiation_message(customer_phone: str, message: str):
 
     if all_items_cancelled(session):
 
+        sync_session_items_to_db(db, session)
         update_workflow_state(
+            db,
             session.order_id,
             OrderState.ORDER_COMPLETED
         )
+
+        db.commit() # Atomic commit
 
         return {
             "message": "Order cancelled successfully.",
@@ -177,12 +184,16 @@ def handle_negotiation_message(customer_phone: str, message: str):
 
     if all_items_resolved(session):
 
+        sync_session_items_to_db(db, session)
         update_workflow_state(
+            db,
             session.order_id,
             OrderState.FINAL_CUSTOMER_CONFIRMATION
         )
 
         summary_message = build_final_summary(session)
+
+        db.commit() # Atomic commit
 
         return {
             "message": summary_message,
@@ -193,12 +204,16 @@ def handle_negotiation_message(customer_phone: str, message: str):
     # STEP 5 — NEGOTIATION CONTINUES
     # -------------------------------------------------
 
+    sync_session_items_to_db(db, session)
+
     pending_items = get_pending_items(session)
 
     pending_message = build_pending_negotiation_message(
         session,
         pending_items
     )
+
+    db.commit() # Atomic commit
 
     return {
         "message": pending_message,

@@ -16,3 +16,4 @@ class OrderState(str, Enum):
     INVOICE_GENERATED = "invoice_generated"
     ORDER_COMPLETED = "order_completed"
     LEDGER_UPDATED = "ledger_updated"
+    ORDER_REJECTED = "order_rejected"

@@ -43,6 +43,7 @@ def deduct_inventory_from_batch(
     batch = (
         db.query(InventoryBatch)
         .filter(InventoryBatch.batch_id == batch_id)
+        .with_for_update()  # 🔒 LOCK ROW
         .first()
     )
 
@@ -51,15 +52,16 @@ def deduct_inventory_from_batch(
 
     # Safety checks (DB-level guard)
     if batch.rolls_available < rolls_to_deduct:
-        raise ValueError("Not enough rolls in batch")
+        raise ValueError(f"Batch {batch_id}: Only {batch.rolls_available} rolls left (Requested: {rolls_to_deduct})")
 
     if batch.loose_meters_available < loose_meters_to_deduct:
-        raise ValueError("Not enough loose meters in batch")
+        raise ValueError(f"Batch {batch_id}: Only {batch.loose_meters_available}m left (Requested: {loose_meters_to_deduct}m)")
 
     batch.rolls_available -= rolls_to_deduct
     batch.loose_meters_available -= loose_meters_to_deduct
 
-    db.commit()
+    # db.commit() REMOVED for atomicity
+    db.flush()
     db.refresh(batch)
 
     return batch

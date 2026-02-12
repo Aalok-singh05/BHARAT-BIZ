@@ -10,9 +10,7 @@ from app.models.customer import Customer
 from app.models.material import Material
 from app.utils.pdf import generate_invoice_pdf
 from app.crud.credit import add_credit_for_invoice
-
-
-GST_RATE = Decimal("0.05")  # 5% GST
+from app.crud.gst_config import get_gst_rate
 
 
 def generate_invoice_number():
@@ -44,8 +42,9 @@ def create_invoice(db: Session, order_id):
         for item in items
     )
 
-    # 4️⃣ GST + total
-    gst_amount = subtotal * GST_RATE
+    # 4️⃣ GST + total (Dynamic from DB)
+    gst_rate = get_gst_rate(db)
+    gst_amount = subtotal * gst_rate
     total_amount = subtotal + gst_amount
 
     # 5️⃣ Create invoice DB record (PDF pending)
@@ -59,7 +58,7 @@ def create_invoice(db: Session, order_id):
     )
 
     db.add(invoice)
-    db.commit()
+    db.flush()  # No commit — caller manages transaction
     db.refresh(invoice)
 
     # 6️⃣ Fetch customer
@@ -109,10 +108,10 @@ def create_invoice(db: Session, order_id):
 
     # 🔟 Update invoice with PDF path
     invoice.pdf_path = str(pdf_path)
-    db.commit()
+    db.flush()  # No commit — caller manages transaction
     db.refresh(invoice)
 
-        # 🔗 Add credit entry for this invoice
+    # 🔗 Add credit entry for this invoice
     add_credit_for_invoice(
         db=db,
         customer_phone=order.customer_phone,
