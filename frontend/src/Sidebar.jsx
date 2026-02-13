@@ -6,9 +6,11 @@ const Sidebar = ({ isExpanded, setIsExpanded }) => {
   const navItems = [
     { name: 'Home', icon: '🏠', path: '/' },
     { name: 'Dashboard', icon: '📊', path: '/Dashboard' },
+    { name: 'Orders', icon: '📋', path: '/orders' },
     { name: 'Approvals', icon: '✅', path: '/approvals' },
     { name: 'Payments', icon: '💰', path: '/payments' },
     { name: 'Documents', icon: '📄', path: '/documents' },
+    { name: 'Customers', icon: '👥', path: '/customers' },
     { name: 'Business Memory', icon: '🧠', path: '/business-memory' },
     { name: 'Inventory', icon: '📦', path: '/inventory' },
   ];

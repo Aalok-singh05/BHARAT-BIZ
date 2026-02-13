@@ -11,6 +11,8 @@ import Agenticchat from './AgenticChat.jsx';
 import AuthPage from './AuthPage.jsx';
 import ApprovalQueue from './ApprovalQueue.jsx';
 import PaymentRecorder from './PaymentRecorder.jsx';
+import Customers from './Customers.jsx';
+import Orders from './Orders.jsx';
 
 function App() {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -36,8 +38,8 @@ function App() {
       {/* Main Content */}
       <div
         className={`rightSection flex-1 transition-all duration-500 ease-in-out min-w-0 ${shouldShowSidebar
-            ? (isExpanded ? 'ml-72' : 'ml-20')
-            : 'w-full'
+          ? (isExpanded ? 'ml-72' : 'ml-20')
+          : 'w-full'
           }`}
       >
         <div className={shouldShowSidebar ? 'p-4 md:p-8' : ''}>
@@ -48,6 +50,8 @@ function App() {
             <Route path="/inventory" element={<InventoryManagement />} />
             <Route path="/dashboard" element={<MerchantDashboard />} />
             <Route path="/approvals" element={<ApprovalQueue />} />
+            <Route path="/customers" element={<Customers />} />
+            <Route path="/orders" element={<Orders />} />
             <Route path="/payments" element={<PaymentRecorder />} />
             <Route path="/login" element={<AuthPage mode="login" />} />
             <Route path="/signup" element={<AuthPage mode="signup" />} />

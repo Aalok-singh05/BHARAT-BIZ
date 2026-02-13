@@ -158,6 +158,25 @@ def handle_final_confirmation_message(db: Session, customer_phone: str, message:
 
         db.commit() # Atomic commit
 
+        # -------------------------------------------------
+        # 🔔 OWNER ALERT
+        # -------------------------------------------------
+        import os
+        from app.integrations.whatsapp import send_whatsapp_message
+        
+        owner_phone = os.getenv("OWNER_PHONE_NUMBER")
+        if owner_phone:
+            alert_msg = (
+                f"🚨 *New Order Alert*\n"
+                f"Customer: {customer_phone}\n"
+                f"Order ID: {session.order_id}\n\n"
+                f"Reply `APPROVE {session.order_id}` or `REJECT {session.order_id}`"
+            )
+            try:
+                send_whatsapp_message(owner_phone, alert_msg)
+            except Exception as e:
+                print(f"Failed to send owner alert: {e}")
+
         return {
             "message": "Order confirm ho gaya hai. Owner approval ke liye bhej diya gaya hai.",
             "awaiting_customer_confirmation": False

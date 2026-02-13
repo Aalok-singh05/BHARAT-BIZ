@@ -1,12 +1,29 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime
 
-
-class InventoryBatch(BaseModel):
+class InventoryBatchCreate(BaseModel):
     material_name: str
-    color: str
+    color: Optional[str] = None
+    rolls: int
+    meters_per_roll: float
+    total_meters: float
+
+class InventoryBatchAdjust(BaseModel):
     batch_id: str
-    rolls_available: int = Field(ge=0)
-    meters_per_roll: float = Field(ge=0)
-    loose_meters_available: float = Field(default=0, ge=0)
-    dye_lot: Optional[str] = None
+    adjustment_type: str # 'add', 'subtract', 'set'
+    rolls: Optional[int] = None
+    meters: Optional[float] = None
+    reason: Optional[str] = None
+
+class InventoryBatchSchema(BaseModel):
+    batch_id: str
+    material_id: str
+    material_name: Optional[str]
+    rolls_available: int
+    meters_available: float
+    original_meters: float
+    received_at: datetime
+
+    class Config:
+        orm_mode = True

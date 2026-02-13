@@ -48,9 +48,34 @@ def create_order_session(
     """
 
     if order_id is None:
-        order_id = f"ORD_{uuid.uuid4().hex[:8]}"
+        order_id = str(uuid.uuid4())
 
-    # 1. Insert session row
+    # -------------------------------------------------
+    # INTEGRITY CHECK: Ensure Customer & Order exist
+    # -------------------------------------------------
+    from app.models.customer import Customer
+    from app.models.order import Order
+
+    # 1. Ensure Customer exists
+    customer = db.query(Customer).filter(Customer.phone_number == customer_phone).first()
+    if not customer:
+        # Create minimal customer if not exists (for simulation/testing)
+        customer = Customer(phone_number=customer_phone, business_name="New Customer")
+        db.add(customer)
+        db.flush()
+
+    # 2. Ensure Order exists
+    order = db.query(Order).filter(Order.order_id == order_id).first()
+    if not order:
+        order = Order(
+            order_id=order_id,
+            customer_phone=customer_phone,
+            status="initiated"
+        )
+        db.add(order)
+        db.flush()
+
+    # 3. Insert session row
     db_session = OrderSessionDB(
         order_id=order_id,
         customer_phone=customer_phone,

@@ -5,6 +5,12 @@ Run this script to verify the system end-to-end.
 
 import time
 import uuid
+import sys
+import os
+
+# Add project root to sys.path so we can import 'app'
+sys.path.append(os.getcwd())
+
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal, Base, engine
@@ -12,7 +18,7 @@ from app.models.inventory import InventoryBatch
 from app.models.material import Material
 from app.models.order_session import OrderSessionDB
 from app.router.message_router import route_message
-from app.main import approve_order, reject_order
+# from app.main import approve_order, reject_order # Avoid circular import if possible, or import inside function
 
 # Setup fake logging to avoid clutter
 import logging
@@ -20,6 +26,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 TEST_PHONE = "9998887776"
+# Use a static valid UUID for testing
+TEST_BATCH_UUID = uuid.UUID("123e4567-e89b-12d3-a456-426614174000")
 
 def setup_test_inventory(db: Session):
     """Ensure we have some inventory to buy."""
@@ -33,17 +41,18 @@ def setup_test_inventory(db: Session):
         db.commit()
     
     # Check/Create batch
-    batch_id = "TEST_BATCH_001"
-    batch = db.query(InventoryBatch).filter_by(batch_id=batch_id).first()
+    batch = db.query(InventoryBatch).filter_by(batch_id=TEST_BATCH_UUID).first()
     if not batch:
         batch = InventoryBatch(
             material_id=mat.material_id,
-            color="blue",
-            batch_id=batch_id,
-            rolls_available=10,
+            color="red",
+            batch_id=TEST_BATCH_UUID,
+            rolls_available=19,
             meters_per_roll=100,
             loose_meters_available=50
         )
+        db.add(batch)
+        db.commit()
         db.add(batch)
         db.commit()
     
@@ -99,6 +108,8 @@ def verify_order_state(db: Session):
 def attempt_approval(order_id: str):
     print(f"\n👮 OWNER APPROVING ORDER: {order_id}")
     print("=" * 40)
+
+    from app.main import approve_order
 
     try:
         result = approve_order(order_id)

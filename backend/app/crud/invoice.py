@@ -38,7 +38,7 @@ def create_invoice(db: Session, order_id):
 
     # 3️⃣ Calculate subtotal
     subtotal = sum(
-        (item.quantity_meters * item.price_per_meter)
+        (Decimal(str(item.quantity_meters)) * Decimal(str(item.price_per_meter)))
         for item in items
     )
 

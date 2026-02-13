@@ -25,6 +25,17 @@ from app.schemas.inventory_schema import InventoryBatch
 
 def route_message(phone: str, message: str) -> str:
 
+    # ---------------------------------------------------------
+    # 👑 OWNER BOT INTERCEPTION
+    # ---------------------------------------------------------
+    import os
+    from app.services.owner_handler_service import handle_owner_message
+
+    owner_phone = os.getenv("OWNER_PHONE_NUMBER")
+    # Normalize phone numbers for comparison (remove +)
+    if owner_phone and phone.replace("+", "") == owner_phone.replace("+", ""):
+        return handle_owner_message(message)
+
     db = SessionLocal()
 
     try:
@@ -57,7 +68,13 @@ def route_message(phone: str, message: str) -> str:
             return result.get("message", "Processing...")
 
         # -------------------------------------------------
-        # 3️⃣ NEW ORDER FLOW
+        # 3️⃣ WAITING FOR OWNER FLOW
+        # -------------------------------------------------
+        if session and session.workflow_state == OrderState.WAITING_OWNER_CONFIRMATION.value:
+            return "⏳ Your order is waiting for owner approval. We will notify you shortly."
+
+        # -------------------------------------------------
+        # 4️⃣ NEW ORDER FLOW
         # -------------------------------------------------
 
         inventory_batches = get_all_inventory_batches(db)

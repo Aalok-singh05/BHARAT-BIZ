@@ -1,187 +1,305 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const InventoryManagement = () => {
-  // --- Central Data State ---
-  const [inventory, setInventory] = useState([
-    { id: 'SKU-001', name: 'Basmati Rice 5kg', category: 'Grocery', price: 550, quantity: 4, expiry: '2026-12-01' },
-    { id: 'SKU-002', name: 'Mustard Oil 1L', category: 'Grocery', price: 185, quantity: 0, expiry: '2026-08-15' },
-    { id: 'SKU-003', name: 'LED Bulb 9W', category: 'Electronics', price: 120, quantity: 45, expiry: 'N/A' },
-  ]);
+  // --- Tabs ---
+  const [activeTab, setActiveTab] = useState('stock'); // Default to stock now
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [editingId, setEditingId] = useState(null);
-  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  
-  const aiFileInputRef = useRef(null);
+  // --- Price Management State ---
+  const [prices, setPrices] = useState([]);
+  const [loadingPrices, setLoadingPrices] = useState(false);
+  const [editingPriceId, setEditingPriceId] = useState(null);
+  const [tempPrice, setTempPrice] = useState('');
 
-  // --- Handlers ---
-  const handleManualUpdate = (id, newValue) => {
-    const val = parseInt(newValue);
-    if (isNaN(val) || val < 0) return setEditingId(null);
+  // --- Stock Management State ---
+  const [inventory, setInventory] = useState([]);
+  const [loadingStock, setLoadingStock] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-    setInventory(prev => prev.map(item => 
-      item.id === id ? { ...item, quantity: val } : item
-    ));
-    setEditingId(null);
+  // New Batch Form
+  const [newBatch, setNewBatch] = useState({
+    material_name: '',
+    rolls: '',
+    meters_per_roll: '',
+    total_meters: ''
+  });
+
+  // --- Load Data ---
+  useEffect(() => {
+    if (activeTab === 'prices') fetchPrices();
+    if (activeTab === 'stock') fetchInventory();
+  }, [activeTab]);
+
+  // --- API Calls ---
+  const fetchPrices = async () => {
+    setLoadingPrices(true);
+    try {
+      const res = await fetch('http://localhost:8000/config/prices');
+      const data = await res.json();
+      setPrices(data);
+    } catch (err) {
+      console.error("Failed to fetch prices", err);
+    } finally {
+      setLoadingPrices(false);
+    }
   };
 
-  const simulateAIUpdate = (type) => {
-    setIsProcessing(true);
-    setTimeout(() => {
-      // Logic: AI finds "Mustard Oil" in the input and sets it to 20
-      setInventory(prev => prev.map(item => 
-        item.id === 'SKU-002' ? { ...item, quantity: 20 } : item
-      ));
-      setIsProcessing(false);
-      setIsAIModalOpen(false);
-      alert(`Saathi AI: Successfully processed ${type} and updated Mustard Oil to 20 units.`);
-    }, 2000);
+  const fetchInventory = async () => {
+    setLoadingStock(true);
+    try {
+      const res = await fetch('http://localhost:8000/inventory');
+      const data = await res.json();
+      setInventory(data);
+    } catch (err) {
+      console.error("Failed to fetch inventory", err);
+    } finally {
+      setLoadingStock(false);
+    }
   };
 
-  // --- Filtering Logic ---
-  const filteredInventory = useMemo(() => {
-    return inventory.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()));
-  }, [searchTerm, inventory]);
+  const handleUpdatePrice = async (materialName) => {
+    if (!tempPrice) return setEditingPriceId(null);
+    try {
+      const res = await fetch('http://localhost:8000/config/prices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          material_name: materialName,
+          price_per_meter: parseFloat(tempPrice)
+        })
+      });
 
+      if (res.ok) {
+        setPrices(prev => prev.map(p =>
+          p.material_name === materialName
+            ? { ...p, price_per_meter: parseFloat(tempPrice) }
+            : p
+        ));
+      }
+    } catch (err) {
+      console.error("Failed to update price", err);
+      alert("Failed to update price");
+    }
+    setEditingPriceId(null);
+  };
+
+  const handleAddBatch = async (e) => {
+    e.preventDefault();
+    try {
+      // Calculate total meters if not manually set (though backend expects it)
+      // For now assume user enters total
+      const payload = {
+        material_name: newBatch.material_name,
+        rolls: parseInt(newBatch.rolls),
+        meters_per_roll: parseFloat(newBatch.meters_per_roll),
+        total_meters: parseFloat(newBatch.total_meters)
+      };
+
+      const res = await fetch('http://localhost:8000/inventory/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        setIsAddModalOpen(false);
+        fetchInventory(); // Refresh
+        setNewBatch({ material_name: '', rolls: '', meters_per_roll: '', total_meters: '' });
+      } else {
+        alert("Failed to add batch");
+      }
+    } catch (err) {
+      console.error("Error adding batch", err);
+      alert("Error adding batch");
+    }
+  };
+
+  // --- Render ---
   return (
     <div className="min-h-screen bg-[#0a0808] text-[#f5f3f0] p-6 md:p-12 pt-24 font-sans relative overflow-x-hidden">
       <div className="max-w-[1400px] mx-auto relative z-10">
-        
-        {/* Header & AI Trigger */}
-        <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-12">
+
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-8">
           <div>
-            <h1 className="text-4xl font-bold gradient-text">Inventory Ledger</h1>
-            <p className="text-[#a89d94] text-sm mt-1">Manual precision meets AI intelligence.</p>
+            <h1 className="text-4xl font-bold gradient-text">Inventory & Pricing</h1>
+            <p className="text-[#a89d94] text-sm mt-1">Manage stock levels and material costs.</p>
           </div>
-          
-          <button 
-            onClick={() => setIsAIModalOpen(true)}
-            className="group px-8 py-3 bg-gradient-to-r from-[#ff9f43] to-[#ffb366] text-[#0a0808] rounded-2xl font-bold flex items-center gap-3 hover:scale-105 transition-all shadow-[0_0_40px_rgba(255,159,67,0.2)]"
-          >
-            <span>✨</span> AI Update Assistant
-          </button>
-        </div>
 
-        {/* Search Bar */}
-        <div className="relative max-w-md mb-8 group">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 opacity-40 group-focus-within:text-[#ff9f43]">🔍</span>
-          <input 
-            type="text" 
-            placeholder="Search item to update..." 
-            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 outline-none focus:border-[#ff9f43]/50 transition-all"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-
-        {/* Inventory Table */}
-        <div className="glass-card rounded-[2.5rem] overflow-hidden border-white/5">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-white/5 text-[#a89d94] text-[10px] uppercase tracking-widest font-bold">
-                <th className="p-6">Product Details</th>
-                <th className="p-6">Current Stock</th>
-                <th className="p-6">Price & Expiry</th>
-                <th className="p-6 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {filteredInventory.map(item => (
-                <tr key={item.id} className="hover:bg-white/[0.02] transition-colors group">
-                  <td className="p-6">
-                    <div className="font-bold text-lg">{item.name}</div>
-                    <div className="text-[10px] text-[#a89d94] font-mono uppercase tracking-tighter">{item.id}</div>
-                  </td>
-                  
-                  <td className="p-6">
-                    {editingId === item.id ? (
-                      <div className="flex items-center gap-2">
-                        <input 
-                          autoFocus
-                          type="number"
-                          className="w-24 bg-[#ff9f43] text-[#0a0808] font-bold px-3 py-1.5 rounded-lg outline-none"
-                          defaultValue={item.quantity}
-                          onKeyDown={(e) => e.key === 'Enter' && handleManualUpdate(item.id, e.target.value)}
-                          onBlur={(e) => handleManualUpdate(item.id, e.target.value)}
-                        />
-                        <span className="text-[10px] font-bold text-[#ff9f43] animate-pulse">ENTER TO SAVE</span>
-                      </div>
-                    ) : (
-                      <div className={`text-2xl font-bold ${item.quantity < 10 ? (item.quantity === 0 ? 'text-red-500' : 'text-[#ff9f43]') : 'text-white'}`}>
-                        {item.quantity}
-                      </div>
-                    )}
-                  </td>
-
-                  <td className="p-6">
-                    <div className="font-bold">₹{item.price}</div>
-                    <div className="text-[10px] text-[#a89d94] uppercase tracking-widest">Exp: {item.expiry}</div>
-                  </td>
-
-                  <td className="p-6 text-right">
-                    <button 
-                      onClick={() => setEditingId(item.id)}
-                      className="px-5 py-2 glass-card rounded-xl text-xs font-bold hover:bg-[#ff9f43] hover:text-[#0a0808] transition-all border-[#ff9f43]/30"
-                    >
-                      Update Quantity
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* AI Assistant Modal */}
-      {isAIModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-xl">
-          <div className="absolute inset-0 bg-[#0a0808]/80" onClick={() => !isProcessing && setIsAIModalOpen(false)} />
-          
-          <div className="relative glass-card w-full max-w-md p-10 rounded-[3rem] border-[#ff9f43]/30 animate-fadeInUp overflow-hidden">
-            {isProcessing && (
-              <div className="absolute inset-0 z-10 bg-[#0a0808]/80 flex flex-col items-center justify-center text-center px-6">
-                <div className="w-12 h-12 border-4 border-[#ff9f43] border-t-transparent rounded-full animate-spin mb-4" />
-                <p className="font-bold gradient-text">Saathi AI is scanning your input...</p>
-              </div>
-            )}
-
-            <h3 className="text-3xl font-bold gradient-text mb-2 text-center text-white">AI Assistant</h3>
-            <p className="text-[#a89d94] text-center text-sm mb-10 italic">"Upload a photo of a bill or tell me what you've received."</p>
-
-            <div className="grid grid-cols-2 gap-4">
-              <button 
-                onClick={() => aiFileInputRef.current.click()}
-                className="flex flex-col items-center gap-4 p-8 glass-card rounded-3xl border-dashed border-white/20 hover:border-[#ff9f43]/50 transition-all group"
-              >
-                <span className="text-4xl">📸</span>
-                <span className="text-xs font-bold text-[#a89d94] uppercase tracking-widest">Photo</span>
-                <input type="file" ref={aiFileInputRef} className="hidden" accept="image/*" onChange={() => simulateAIUpdate('Photo')} />
-              </button>
-
-              <button 
-                onClick={() => simulateAIUpdate('Voice Note')}
-                className="flex flex-col items-center gap-4 p-8 glass-card rounded-3xl border-dashed border-white/20 hover:border-[#ff9f43]/50 transition-all group"
-              >
-                <div className="relative">
-                  <span className="text-4xl">🎙️</span>
-                  <div className="absolute inset-0 bg-[#ff9f43]/20 blur-xl animate-pulse" />
-                </div>
-                <span className="text-xs font-bold text-[#a89d94] uppercase tracking-widest">Voice</span>
-              </button>
-            </div>
-
-            <button 
-              disabled={isProcessing}
-              onClick={() => setIsAIModalOpen(false)} 
-              className="w-full mt-10 text-[#a89d94] font-bold text-xs uppercase tracking-widest"
+          <div className="flex bg-white/5 p-1 rounded-xl">
+            <button
+              onClick={() => setActiveTab('stock')}
+              className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'stock' ? 'bg-[#ff9f43] text-[#0a0808]' : 'text-[#a89d94] hover:text-white'}`}
             >
-              Cancel
+              Stock Management
+            </button>
+            <button
+              onClick={() => setActiveTab('prices')}
+              className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'prices' ? 'bg-[#ff9f43] text-[#0a0808]' : 'text-[#a89d94] hover:text-white'}`}
+            >
+              Material Prices
             </button>
           </div>
         </div>
-      )}
+
+        {/* --- STOCK TAB --- */}
+        {activeTab === 'stock' && (
+          <div className="animate-fadeInUp">
+            <div className="flex justify-end mb-6">
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                className="px-6 py-3 bg-[#4cd964] text-[#0a0808] font-bold rounded-xl hover:scale-105 transition-transform flex items-center gap-2"
+              >
+                <span>+</span> Add New Stock
+              </button>
+            </div>
+
+            <div className="glass-card rounded-[2.5rem] overflow-hidden border-white/5">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-white/5 text-[#a89d94] text-[10px] uppercase tracking-widest font-bold">
+                    <th className="p-6">Batch ID</th>
+                    <th className="p-6">Material</th>
+                    <th className="p-6">Available Stock</th>
+                    <th className="p-6">Received</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {inventory.map(b => (
+                    <tr key={b.batch_id} className="hover:bg-white/[0.02] transition-colors">
+                      <td className="p-6 font-mono text-xs text-[#ff9f43]">{b.batch_id}</td>
+                      <td className="p-6 font-bold">{b.material_name}</td>
+                      <td className="p-6">
+                        <div className="font-bold">{b.rolls_available} Rolls</div>
+                        <div className="text-xs text-[#a89d94]">{b.meters_available} meters</div>
+                      </td>
+                      <td className="p-6 text-xs text-[#a89d94]">{new Date(b.received_at).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                  {inventory.length === 0 && !loadingStock && (
+                    <tr><td colSpan="4" className="p-8 text-center text-[#a89d94]">No stock found.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* --- PRICES TAB --- */}
+        {activeTab === 'prices' && (
+          <div className="glass-card rounded-[2.5rem] overflow-hidden border-white/5 animate-fadeInUp">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-white/5 text-[#a89d94] text-[10px] uppercase tracking-widest font-bold">
+                  <th className="p-6">Material Name</th>
+                  <th className="p-6">Category</th>
+                  <th className="p-6">Price / Meter (₹)</th>
+                  <th className="p-6 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {prices.map(item => (
+                  <tr key={item.material_id} className="hover:bg-white/[0.02] transition-colors group">
+                    <td className="p-6 font-bold text-lg">{item.material_name}</td>
+                    <td className="p-6 text-[#a89d94] text-sm">{item.category || 'N/A'}</td>
+
+                    <td className="p-6">
+                      {editingPriceId === item.material_id ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            autoFocus
+                            type="number"
+                            className="w-32 bg-[#ff9f43] text-[#0a0808] font-bold px-3 py-1.5 rounded-lg outline-none"
+                            placeholder={item.price_per_meter}
+                            value={tempPrice}
+                            onChange={(e) => setTempPrice(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleUpdatePrice(item.material_name)}
+                          />
+                          <button onClick={() => handleUpdatePrice(item.material_name)} className="text-xs font-bold text-[#ff9f43]">SAVE</button>
+                        </div>
+                      ) : (
+                        <div className="text-xl font-bold text-[#ff9f43]">₹{item.price_per_meter}</div>
+                      )}
+                    </td>
+
+                    <td className="p-6 text-right">
+                      {editingPriceId !== item.material_id && (
+                        <button
+                          onClick={() => {
+                            setEditingPriceId(item.material_id);
+                            setTempPrice(item.price_per_meter);
+                          }}
+                          className="px-5 py-2 glass-card rounded-xl text-xs font-bold hover:bg-white/10 transition-all border-[#ff9f43]/30"
+                        >
+                          Edit Price
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Add Batch Modal */}
+        {isAddModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-xl">
+            <div className="absolute inset-0 bg-[#0a0808]/80" onClick={() => setIsAddModalOpen(false)} />
+            <div className="relative glass-card w-full max-w-lg p-8 rounded-[2rem] border-[#ff9f43]/30 animate-fadeInUp">
+              <h2 className="text-2xl font-bold gradient-text mb-6">Add New Stock</h2>
+              <form onSubmit={handleAddBatch} className="space-y-4">
+                <div>
+                  <label className="text-xs text-[#a89d94] uppercase font-bold">Material Name</label>
+                  <input
+                    type="text"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl p-3 outline-none focus:border-[#ff9f43]"
+                    value={newBatch.material_name}
+                    onChange={e => setNewBatch({ ...newBatch, material_name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-[#a89d94] uppercase font-bold">Rolls</label>
+                    <input
+                      type="number"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl p-3 outline-none focus:border-[#ff9f43]"
+                      value={newBatch.rolls}
+                      onChange={e => setNewBatch({ ...newBatch, rolls: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-[#a89d94] uppercase font-bold">Meters / Roll</label>
+                    <input
+                      type="number"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl p-3 outline-none focus:border-[#ff9f43]"
+                      value={newBatch.meters_per_roll}
+                      onChange={e => setNewBatch({ ...newBatch, meters_per_roll: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-[#a89d94] uppercase font-bold">Total Meters</label>
+                  <input
+                    type="number"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl p-3 outline-none focus:border-[#ff9f43]"
+                    value={newBatch.total_meters}
+                    onChange={e => setNewBatch({ ...newBatch, total_meters: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <button type="submit" className="w-full py-3 bg-[#ff9f43] text-[#0a0808] font-bold rounded-xl hover:scale-105 transition-transform mt-4">
+                  Save Stock
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+      </div>
     </div>
   );
 };

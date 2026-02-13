@@ -14,11 +14,20 @@ import app.models  # IMPORTANT: loads all models
 # Scheduler
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.scheduler.reminders import check_overdue_customers
+from app.scheduler.alerts import check_low_stock_daily
+from app.scheduler.alerts import check_low_stock_daily
 
 # Core routing
 from app.router.message_router import route_message
-from app.integrations.whatsapp import send_whatsapp_message
+from app.integrations.whatsapp import send_whatsapp_message, upload_media, send_document_message
+from app.utils.pdf import generate_invoice_pdf
 from app.models.message import Message
+
+from app.router import product_router
+from app.router import customer_router
+from app.router import order_history_router
+from app.router import analytics_router
+from app.router import inventory_router
 
 load_dotenv()
 
@@ -40,7 +49,16 @@ app.add_middleware(
 
 scheduler = BackgroundScheduler()
 scheduler.add_job(check_overdue_customers, "interval", days=7)
+scheduler.add_job(check_overdue_customers, "interval", days=7)
 scheduler.start()
+
+
+# ---------------- Routers ---------------- #
+app.include_router(product_router.router)
+app.include_router(customer_router.router)
+app.include_router(order_history_router.router)
+app.include_router(analytics_router.router)
+app.include_router(inventory_router.router)
 
 
 # ---------------- Startup ---------------- #
@@ -237,22 +255,58 @@ def approve_order(order_id: str):
             )
 
         # -------------------------------------------------
-        # 3️⃣ Inventory Deduction (TRANSACTION SAFE)
+        # 3️⃣ Inventory Deduction & Item Migration
         # -------------------------------------------------
+
+        from app.models.order_item import OrderItem
+        from app.models.material import Material
 
         for item in session.items:
 
-            if not item.fulfilled_batches:
-                continue
+            # 3.1 Deduct Inventory using fulfilled_batches
+            if item.fulfilled_batches:
+                for batch in item.fulfilled_batches:
+                    deduct_inventory_from_batch(
+                        db=db,
+                        batch_id=batch["batch_id"],
+                        rolls_to_deduct=batch.get("rolls", 0),
+                        loose_meters_to_deduct=batch.get("loose_meters", 0)
+                    )
 
-            for batch in item.fulfilled_batches:
+            # 3.2 Create Permanent OrderItem Record (Needed for Invoice)
+            # Fetch material ID (assuming material_name is unique/correct)
+            material_id = None
+            mat_name = item.measurement.material_name
+            logger.info(f"Looking up material: {mat_name}")
+            
+            mat_obj = db.query(Material).filter(Material.material_name == mat_name).first()
+            if mat_obj:
+                material_id = mat_obj.material_id
+            else:
+                logger.error(f"Material '{mat_name}' NOT found in DB. Cannot create OrderItem.")
 
-                deduct_inventory_from_batch(
-                    db=db,
-                    batch_id=batch["batch_id"],
-                    rolls_to_deduct=batch.get("rolls", 0),
-                    loose_meters_to_deduct=batch.get("loose_meters", 0)
+            # If material not found, we skip or error? For now, if missing, we can't create valid OrderItem.
+            if material_id:
+                # Use DB price if available, fallback to 150 if somehow missing (shouldn't happen with default)
+                price = 150.0
+                if mat_obj and hasattr(mat_obj, 'price_per_meter'):
+                     price = float(mat_obj.price_per_meter)
+
+                new_permanent_item = OrderItem(
+                    order_id=order_id,
+                    material_id=material_id,
+                    quantity_meters=item.measurement.normalized_meters,
+                    price_per_meter=price
                 )
+                db.add(new_permanent_item)
+                logger.info(f"Created permanent item for material {mat_name} at price {price}")
+        
+        db.flush() # Persist OrderItems so create_invoice can find them
+        
+        # Verify items exist before invoicing
+        count_items = db.query(OrderItem).filter(OrderItem.order_id == order_id).count()
+        if count_items == 0:
+            raise HTTPException(status_code=500, detail=f"Failed to migrate order items. Check server logs for material lookup failures.")
 
         # -------------------------------------------------
         # 4️⃣ Create Invoice
@@ -272,12 +326,68 @@ def approve_order(order_id: str):
         
         db.commit() # Atomic commit (Inventory + Invoice + State)
 
-        send_whatsapp_message(
-            session.customer_phone,
-            f"Your order has been approved.\n"
-            f"Invoice No: {invoice.invoice_number}\n"
-            f"Total: ₹{invoice.total_amount}"
-        )
+        # -------------------------------------------------
+        # 6️⃣ Notify Customer with Invoice PDF
+        # -------------------------------------------------
+        try:
+            # 1. Fetch Data for PDF
+            customer = db.query(Customer).filter(Customer.phone_number == session.customer_phone).first()
+            customer_name = customer.business_name if customer else "Valued Customer"
+            
+            # Re-query items to get price details
+            pdf_items = []
+            db_items = db.query(OrderItem, Material.material_name).join(Material, OrderItem.material_id == Material.material_id).filter(OrderItem.order_id == order_id).all()
+            
+            for item, mat_name in db_items:
+                pdf_items.append({
+                    "material": mat_name,
+                    "qty": float(item.quantity_meters or 0),
+                    "rate": float(item.price_per_meter or 150),
+                    "amount": float((item.quantity_meters or 0) * (item.price_per_meter or 150))
+                })
+
+            pdf_context = {
+                "invoice_number": invoice.invoice_number,
+                "date": invoice.issued_at.strftime("%Y-%m-%d"),
+                "customer_name": customer_name,
+                "customer_phone": session.customer_phone,
+                "items": pdf_items,
+                "subtotal": float(invoice.total_amount - invoice.gst_amount),
+                "gst": float(invoice.gst_amount),
+                "total": float(invoice.total_amount)
+            }
+            
+            # 2. Generate PDF
+            pdf_filename = f"Invoice_{invoice.invoice_number}.pdf"
+            pdf_path = os.path.join(os.getcwd(), pdf_filename)
+            generate_invoice_pdf(pdf_context, pdf_path)
+            
+            # 3. Upload & Send
+            media_id = upload_media(pdf_path)
+            if media_id:
+                send_document_message(
+                    session.customer_phone,
+                    media_id,
+                    pdf_filename,
+                    caption=f"Billed: ₹{invoice.total_amount}"
+                )
+            else:
+                # Fallback to text if upload fails
+                send_whatsapp_message(
+                    session.customer_phone,
+                    f"Order Approved! Invoice: {invoice.invoice_number}. Total: ₹{invoice.total_amount}"
+                )
+
+            # Cleanup
+            if os.path.exists(pdf_path):
+                os.remove(pdf_path)
+
+        except Exception as notify_ex:
+            logging.error(f"Failed to send invoice PDF: {notify_ex}")
+            send_whatsapp_message(
+                session.customer_phone, 
+                f"Order Approved! Total: ₹{invoice.total_amount}. (Invoice PDF generation failed)"
+            )
 
         return {
             "status": "approved",
@@ -515,3 +625,13 @@ def set_gst_rate(req: GSTConfigRequest):
 
     finally:
         db.close()
+
+# ----------------------------------------------------------------
+# ⏰ SCHEDULER INITIALIZATION
+# ----------------------------------------------------------------
+@app.on_event("startup")
+def start_scheduler():
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(check_overdue_customers, 'interval', hours=24)
+    scheduler.add_job(check_low_stock_daily, 'cron', hour=9, minute=0) # Daily alert at 9 am
+    scheduler.start()
