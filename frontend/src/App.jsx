@@ -5,7 +5,7 @@ import Demo from './Demo.jsx';
 import Document from './Documents.jsx';
 import BusinessMemory from './BussinessMemory.jsx';
 import InventoryManagement from './InventoryManagement.jsx';
-import MerchantDashboard from './Dashboard.jsx';
+import MerchantDashboard from './Dashboard.jsx'; // Ensure file exists
 import Sidebar from './Sidebar.jsx';
 import Agenticchat from './AgenticChat.jsx';
 import AuthPage from './AuthPage.jsx';
@@ -16,53 +16,50 @@ import Orders from './Orders.jsx';
 
 import Profile from './profile.jsx';
 
+import { AuthProvider } from './context/AuthContext.jsx';
+import ProtectedRoute from './ProtectedRoute.jsx';
+
 function App() {
   const [isExpanded, setIsExpanded] = useState(false);
-
-  // Get current path
   const location = useLocation();
-
-  // Routes where sidebar should be hidden
-  const hideSidebarRoutes = ['/', '/login', '/signup'];
-
+  const hideSidebarRoutes = ['/login', '/signup', '/']; // Removed '/' from hidden if '/' is protected
   const shouldShowSidebar = !hideSidebarRoutes.includes(location.pathname);
 
   return (
-    <div className="App flex min-h-screen bg-[#0a0808] overflow-x-hidden">
+    <AuthProvider>
+      <div className={`App bg-[#0a0808] ${shouldShowSidebar ? 'flex h-screen overflow-hidden' : 'min-h-screen overflow-x-hidden'}`}>
 
-      {/* Sidebar */}
-      {shouldShowSidebar && (
-        <div className="leftSection fixed h-full z-50">
+        {/* Sidebar */}
+        {shouldShowSidebar && (
           <Sidebar isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
-        </div>
-      )}
+        )}
 
-      {/* Main Content */}
-      <div
-        className={`rightSection flex-1 transition-all duration-500 ease-in-out min-w-0 ${shouldShowSidebar
-          ? (isExpanded ? 'ml-72' : 'ml-20')
-          : 'w-full'
-          }`}
-      >
-        <div className={shouldShowSidebar ? 'p-4 md:p-8' : ''}>
-          <Routes>
-            <Route path="/" element={<Demo />} />
-            <Route path="/documents" element={<Document />} />
-            <Route path="/business-memory" element={<BusinessMemory />} />
-            <Route path="/inventory" element={<InventoryManagement />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/dashboard" element={<MerchantDashboard />} />
-            <Route path="/approvals" element={<ApprovalQueue />} />
-            <Route path="/customers" element={<Customers />} />
-            <Route path="/orders" element={<Orders />} />
-            <Route path="/payments" element={<PaymentRecorder />} />
-            <Route path="/login" element={<AuthPage mode="login" />} />
-            <Route path="/signup" element={<AuthPage mode="signup" />} />
-            <Route path="/AgenticChat" element={<Agenticchat />} />
-          </Routes>
+        {/* Main Content */}
+        <div className={shouldShowSidebar ? "rightSection flex-1 flex flex-col min-w-0 w-full h-full overflow-hidden relative" : "w-full"}>
+          <div className={shouldShowSidebar ? `flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth` : ""}>
+            <Routes>
+              <Route path="/login" element={<AuthPage mode="login" />} />
+              <Route path="/signup" element={<AuthPage mode="signup" />} />
+              <Route path="/" element={<Demo />} />
+
+              {/* Protected Routes */}
+              <Route element={<ProtectedRoute />}>
+                <Route path="/documents" element={<Document />} />
+                <Route path="/business-memory" element={<BusinessMemory />} />
+                <Route path="/inventory" element={<InventoryManagement />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/dashboard" element={<MerchantDashboard />} />
+                <Route path="/approvals" element={<ApprovalQueue />} />
+                <Route path="/customers" element={<Customers />} />
+                <Route path="/orders" element={<Orders />} />
+                <Route path="/payments" element={<PaymentRecorder />} />
+                <Route path="/AgenticChat" element={<Agenticchat />} />
+              </Route>
+            </Routes>
+          </div>
         </div>
       </div>
-    </div>
+    </AuthProvider>
   );
 }
 

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Store, Save, X, Edit2, AlertCircle, ShoppingBag } from 'lucide-react';
+import { Store, Save, X, Edit2, AlertCircle, ShoppingBag, LogOut } from 'lucide-react'; // Added LogOut
+import { useAuth } from './context/AuthContext'; // Import Auth
 
 const ProfilePage = () => {
+  const { logout } = useAuth(); // Get logout function
   const [user, setUser] = useState({
     shop_name: 'Sharma Textiles',
     email: 'sharma@gmail.com',
@@ -17,7 +19,7 @@ const ProfilePage = () => {
   // Validation Logic
   const validate = () => {
     let newErrors = {};
-    
+
     // Shop Name Validation
     if (!formData.shop_name.trim()) {
       newErrors.shop_name = "Business name is required.";
@@ -26,7 +28,7 @@ const ProfilePage = () => {
     // Email Validation (Strict suffixes)
     const emailValue = formData.email.toLowerCase().trim();
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    
+
     if (!emailRegex.test(emailValue)) {
       newErrors.email = "Please enter a valid email address.";
     } else if (!emailValue.endsWith('@gmail.com') && !emailValue.endsWith('@outlook.com')) {
@@ -44,7 +46,7 @@ const ProfilePage = () => {
 
   const handlePhoneChange = (e) => {
     // Feature: Only numbers, max 10 digits
-    const value = e.target.value.replace(/\D/g, ''); 
+    const value = e.target.value.replace(/\D/g, '');
     if (value.length <= 10) {
       setFormData({ ...formData, phone: value });
       if (errors.phone) setErrors({ ...errors, phone: null });
@@ -73,7 +75,7 @@ const ProfilePage = () => {
   return (
     <div className="min-h-screen bg-[#0a0808] text-[#f5f3f0] flex justify-center p-4 md:p-10 font-sans">
       <div className="w-full max-w-4xl space-y-6">
-        
+
         {/* Profile Header - Now Editable */}
         <div className="glass-card p-8 rounded-3xl border border-[#ff9f43]/20 flex flex-col md:flex-row items-center gap-6 bg-[#12100e]">
           <div className="w-24 h-24 rounded-full bg-[#ff9f43]/10 border-2 border-[#ff9f43] flex items-center justify-center text-[#ff9f43]">
@@ -95,7 +97,7 @@ const ProfilePage = () => {
               <>
                 <h1 className="text-3xl font-bold">{user.shop_name}</h1>
                 <p className="text-[#a89d94] flex items-center justify-center md:justify-start gap-2">
-                   <ShoppingBag size={14} /> {user.role}
+                  <ShoppingBag size={14} /> {user.role}
                 </p>
               </>
             )}
@@ -107,12 +109,17 @@ const ProfilePage = () => {
           <div className="flex justify-between items-center mb-6 border-b border-[#ff9f43]/10 pb-4">
             <h3 className="text-xl font-bold text-[#ff9f43]">Business Details</h3>
             {!isEditing && (
-              <button onClick={() => setIsEditing(true)} className="flex items-center gap-2 px-4 py-2 bg-[#ff9f43]/10 text-[#ff9f43] rounded-lg hover:bg-[#ff9f43]/20 transition-all text-sm font-bold">
-                <Edit2 size={16} /> Edit Profile
-              </button>
+              <div className="flex gap-3">
+                <button onClick={logout} className="flex items-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 transition-all text-sm font-bold border border-red-500/20">
+                  <LogOut size={16} /> Logout
+                </button>
+                <button onClick={() => setIsEditing(true)} className="flex items-center gap-2 px-4 py-2 bg-[#ff9f43]/10 text-[#ff9f43] rounded-lg hover:bg-[#ff9f43]/20 transition-all text-sm font-bold">
+                  <Edit2 size={16} /> Edit Profile
+                </button>
+              </div>
             )}
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Email Field */}
             <div className="flex flex-col">
@@ -128,7 +135,7 @@ const ProfilePage = () => {
                   />
                   {errors.email && (
                     <div className="flex items-center gap-1 text-red-500 mt-2 text-xs font-medium">
-                      <AlertCircle size={14}/> {errors.email}
+                      <AlertCircle size={14} /> {errors.email}
                     </div>
                   )}
                 </>
@@ -153,7 +160,7 @@ const ProfilePage = () => {
                   </div>
                   {errors.phone && (
                     <div className="flex items-center gap-1 text-red-500 mt-2 text-xs font-medium">
-                      <AlertCircle size={14}/> {errors.phone}
+                      <AlertCircle size={14} /> {errors.phone}
                     </div>
                   )}
                 </>

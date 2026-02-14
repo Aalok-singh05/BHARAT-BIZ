@@ -159,6 +159,7 @@ const InventoryManagement = () => {
                   <tr className="bg-white/5 text-[#a89d94] text-[10px] uppercase tracking-widest font-bold">
                     <th className="p-6">Batch ID</th>
                     <th className="p-6">Material</th>
+                    <th className="p-6">Color</th>
                     <th className="p-6">Available Stock</th>
                     <th className="p-6">Received</th>
                   </tr>
@@ -168,15 +169,16 @@ const InventoryManagement = () => {
                     <tr key={b.batch_id} className="hover:bg-white/[0.02] transition-colors">
                       <td className="p-6 font-mono text-xs text-[#ff9f43]">{b.batch_id}</td>
                       <td className="p-6 font-bold">{b.material_name}</td>
+                      <td className="p-6">{b.color || 'N/A'}</td>
                       <td className="p-6">
                         <div className="font-bold">{b.rolls_available} Rolls</div>
-                        <div className="text-xs text-[#a89d94]">{b.meters_available} meters</div>
+                        <div className="text-xs text-[#a89d94]">{b.loose_meters_available} meters (loose)</div>
                       </td>
-                      <td className="p-6 text-xs text-[#a89d94]">{new Date(b.received_at).toLocaleDateString()}</td>
+                      <td className="p-6 text-xs text-[#a89d94]">{new Date(b.created_at).toLocaleDateString()}</td>
                     </tr>
                   ))}
                   {inventory.length === 0 && !loadingStock && (
-                    <tr><td colSpan="4" className="p-8 text-center text-[#a89d94]">No stock found.</td></tr>
+                    <tr><td colSpan="5" className="p-8 text-center text-[#a89d94]">No stock found.</td></tr>
                   )}
                 </tbody>
               </table>

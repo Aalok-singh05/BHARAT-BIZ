@@ -10,7 +10,7 @@ class MaterialSchema(BaseModel):
     total_stock_meters: float = 0.0
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class MaterialPriceUpdate(BaseModel):
     material_name: str

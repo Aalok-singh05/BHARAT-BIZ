@@ -1,17 +1,25 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
+import { useAuth } from './context/AuthContext.jsx';
 import {
-    animate,
-    motion,
-    useMotionValue,
-    useMotionValueEvent,
-    useScroll,
-} from "framer-motion" 
+  animate,
+  motion,
+  useMotionValue,
+  useMotionValueEvent,
+  useScroll,
+} from "framer-motion"
 import './index.css';
 
 const AgenticAICopilot = () => {
+  const { token } = useAuth();
+
+  // If user is logged in, redirect to dashboard immediately
+  if (token) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   const [activeFeature, setActiveFeature] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
   const heroRef = useRef(null);
@@ -19,7 +27,7 @@ const AgenticAICopilot = () => {
   // --- Scroll Linked Mask Logic ---
   const scrollContainerRef = useRef(null);
   const { scrollXProgress } = useScroll({ container: scrollContainerRef });
-  
+
   const left = `0%`;
   const right = `100%`;
   const leftInset = `15%`;
@@ -106,7 +114,7 @@ const AgenticAICopilot = () => {
 
   return (
     <div className="min-h-screen bg-[#0a0808] text-[#f5f3f0] overflow-x-hidden relative selection:bg-[#ff9f43]/30">
-      
+
       <style>{`
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -122,7 +130,7 @@ const AgenticAICopilot = () => {
 
       {/* Scroll Progress Bar */}
       <div className="fixed top-0 left-0 w-full h-1 bg-[#1a0f0a]/50 z-50">
-        <div 
+        <div
           className="h-full bg-gradient-to-r from-[#ff9f43] to-[#ffb366] transition-all duration-300"
           style={{ width: `${scrollProgress}%` }}
         />
@@ -135,7 +143,6 @@ const AgenticAICopilot = () => {
           <div className="hidden md:flex items-center gap-8">
             <a href="#demo" className="text-[#a89d94] hover:text-[#ff9f43] transition-colors text-sm font-medium">How it works</a>
             <a href="#features" className="text-[#a89d94] hover:text-[#ff9f43] transition-colors text-sm font-medium">Features</a>
-            <Link to="/dashboard" className="text-[#a89d94] hover:text-[#ff9f43] transition-colors text-sm font-medium">Dashboard</Link>
             <div className="flex items-center gap-4 ml-2">
               <Link to="/login"><button className="text-[#f5f3f0] hover:text-[#ff9f43] font-semibold transition-colors">Login</button></Link>
               <Link to="/signup">
@@ -271,9 +278,9 @@ const AgenticAICopilot = () => {
           </div>
 
           <div className="relative">
-            <motion.div 
-              ref={scrollContainerRef} 
-              style={{ maskImage }} 
+            <motion.div
+              ref={scrollContainerRef}
+              style={{ maskImage }}
               className="flex overflow-x-scroll gap-8 pb-12 hide-scrollbar snap-x"
             >
               {features.map((feature, idx) => (
@@ -283,7 +290,7 @@ const AgenticAICopilot = () => {
                   className="flex-shrink-0 w-[85vw] md:w-[400px] snap-center glass-card spotlight-card rounded-3xl p-10 transition-all duration-500 relative overflow-hidden group border border-[#ff9f43]/10"
                 >
                   <div className="pointer-events-none absolute -inset-px opacity-0 transition duration-300 group-hover:opacity-100"
-                       style={{ background: `radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), rgba(255,159,67,0.15), transparent 40%)` }}
+                    style={{ background: `radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), rgba(255,159,67,0.15), transparent 40%)` }}
                   />
                   <div className="relative z-10">
                     <div className="text-5xl mb-6">{feature.icon}</div>

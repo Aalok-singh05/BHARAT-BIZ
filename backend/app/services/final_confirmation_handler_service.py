@@ -166,11 +166,15 @@ def handle_final_confirmation_message(db: Session, customer_phone: str, message:
         
         owner_phone = os.getenv("OWNER_PHONE_NUMBER")
         if owner_phone:
+            # Short ID for easier typing
+            short_id = str(session.order_id)[:5]
+            
             alert_msg = (
                 f"🚨 *New Order Alert*\n"
                 f"Customer: {customer_phone}\n"
-                f"Order ID: {session.order_id}\n\n"
-                f"Reply `APPROVE {session.order_id}` or `REJECT {session.order_id}`"
+                f"Order ID: `{session.order_id}`\n\n"
+                f"👉 Reply *YES* to approve instantly.\n"
+                f"👉 Or `APPROVE {short_id}` / `REJECT {short_id}`"
             )
             try:
                 send_whatsapp_message(owner_phone, alert_msg)

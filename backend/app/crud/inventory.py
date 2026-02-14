@@ -1,3 +1,4 @@
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.models.inventory import InventoryBatch
 from app.models.material import Material
@@ -13,11 +14,13 @@ def get_inventory_batches(
     AI layer decides how to use them.
     """
 
+
+
     return (
         db.query(InventoryBatch)
         .join(Material)
-        .filter(Material.material_name == material_name)
-        .filter(InventoryBatch.color == color)
+        .filter(func.lower(Material.material_name) == material_name.lower())
+        .filter(func.lower(InventoryBatch.color) == color.lower())
         .filter(
             (InventoryBatch.rolls_available > 0) |
             (InventoryBatch.loose_meters_available > 0)
@@ -64,4 +67,58 @@ def deduct_inventory_from_batch(
     db.flush()
     db.refresh(batch)
 
+    return batch
+
+
+def deduct_meters_from_batch(
+    db: Session,
+    batch_id: str,
+    meters_to_deduct: float
+):
+    """
+    Smart deduction: Takes loose meters first, then opens rolls if needed.
+    """
+    batch = (
+        db.query(InventoryBatch)
+        .filter(InventoryBatch.batch_id == batch_id)
+        .with_for_update()
+        .first()
+    )
+
+    if not batch:
+        raise ValueError(f"Batch {batch_id} not found")
+
+    meters_remaining = float(meters_to_deduct)
+    
+    # 1. Take from loose meters
+    if batch.loose_meters_available >= meters_remaining:
+        batch.loose_meters_available = float(batch.loose_meters_available) - meters_remaining
+        meters_remaining = 0
+    else:
+        meters_remaining -= float(batch.loose_meters_available)
+        batch.loose_meters_available = 0.0
+
+    # 2. If still need meters, open rolls
+    if meters_remaining > 0:
+        roll_length = float(batch.meters_per_roll)
+        if roll_length <= 0:
+             raise ValueError(f"Batch {batch_id} has invalid meters_per_roll: {roll_length}")
+
+        import math
+        rolls_needed = math.ceil(meters_remaining / roll_length)
+
+        if batch.rolls_available < rolls_needed:
+             raise ValueError(f"Insufficient stock in Batch {batch_id}. Needed {rolls_needed} rolls, have {batch.rolls_available}")
+
+        batch.rolls_available -= rolls_needed
+        
+        # Add opened rolls to loose meters (minus what we used)
+        # Total meters from opened rolls = rolls_needed * roll_length
+        # We used 'meters_remaining'
+        # New loose meters = (rolls_needed * roll_length) - meters_remaining
+        new_loose = (rolls_needed * roll_length) - meters_remaining
+        batch.loose_meters_available = float(batch.loose_meters_available) + new_loose
+
+    db.flush()
+    db.refresh(batch)
     return batch

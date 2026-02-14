@@ -238,7 +238,19 @@ def update_workflow_state(
         return None
 
     session_row.workflow_state = new_state.value
-    session_row.workflow_state = new_state.value
+    
+    # SYNC TO MAIN ORDER TABLE
+    # -------------------------
+    from app.models.order import Order
+    order = db.query(Order).filter(Order.order_id == order_id).first()
+    if order:
+        if new_state == OrderState.ORDER_COMPLETED:
+            order.status = "COMPLETED"
+        elif new_state == OrderState.ORDER_REJECTED:
+            order.status = "REJECTED"
+        elif new_state == OrderState.WAITING_OWNER_CONFIRMATION:
+            order.status = "PENDING_APPROVAL"
+        
     # db.commit() REMOVED for atomicity
     db.flush() 
     db.refresh(session_row)

@@ -16,7 +16,7 @@ from app.services.final_confirmation_handler_service import (
 from app.services.order_session_manager import get_active_session_by_phone
 
 from app.workflows.order_states import OrderState
-from app.schemas.inventory_schema import InventoryBatch
+from app.schemas.inventory_schema import InventoryBatchSchema
 
 
 # ---------------------------------------------------------
@@ -118,13 +118,15 @@ def get_all_inventory_batches(db):
 
     for batch in batches:
         converted.append(
-            InventoryBatch(
+            InventoryBatchSchema(
                 material_name=batch.material.material_name,
+                material_id=str(batch.material_id),
                 color=batch.color,
                 batch_id=str(batch.batch_id),
                 rolls_available=batch.rolls_available,
                 meters_per_roll=batch.meters_per_roll,
-                loose_meters_available=batch.loose_meters_available
+                loose_meters_available=batch.loose_meters_available,
+                created_at=batch.created_at
             )
         )
 

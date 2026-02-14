@@ -11,4 +11,4 @@ class Material(Base):
     material_name = Column(String, nullable=False, unique=True)
     category = Column(String, nullable=True)
     price_per_meter = Column(Numeric, nullable=False, default=150.0)
-    total_stock_meters = Column(Numeric, nullable=False, default=0.0)
+

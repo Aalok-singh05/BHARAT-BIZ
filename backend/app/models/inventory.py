@@ -21,7 +21,7 @@ class InventoryBatch(Base):
     material = relationship("Material")
 
     color = Column(String, nullable=False)
-    dye_lot = Column(String, nullable=True)
+
 
     rolls_available = Column(Integer, nullable=False, default=0)
     meters_per_roll = Column(Numeric, nullable=False)

@@ -1,19 +1,19 @@
 from typing import List, Dict
 
-from app.schemas.inventory_schema import InventoryBatch
+from app.schemas.inventory_schema import InventoryBatchSchema
 from app.schemas.measurement_schema import TextileMeasurement
 
 
-def calculate_batch_meters(batch: InventoryBatch) -> float:
+def calculate_batch_meters(batch: InventoryBatchSchema) -> float:
     """
     Calculates total available meters in a batch.
     """
     return (batch.rolls_available * batch.meters_per_roll) + batch.loose_meters_available
 
 
-def filter_matching_batches(batches: List[InventoryBatch],
+def filter_matching_batches(batches: List[InventoryBatchSchema],
                             material_name: str,
-                            color: str) -> List[InventoryBatch]:
+                            color: str) -> List[InventoryBatchSchema]:
     """
     Filters inventory batches by material and color.
     """
@@ -25,7 +25,7 @@ def filter_matching_batches(batches: List[InventoryBatch],
 
 
 def check_inventory(order_item: TextileMeasurement,
-                    available_batches: List[InventoryBatch],
+                    available_batches: List[InventoryBatchSchema],
                     color: str) -> Dict:
     """
     Checks inventory availability and returns fulfillment plan.

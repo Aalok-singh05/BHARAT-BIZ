@@ -18,7 +18,7 @@ class CustomerOrderSummary(BaseModel):
     items_summary: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class CustomerDetail(CustomerBase):
     phone_number: str
@@ -28,7 +28,7 @@ class CustomerDetail(CustomerBase):
     recent_orders: List[CustomerOrderSummary] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class CustomerListItem(BaseModel):
     phone_number: str
@@ -39,4 +39,4 @@ class CustomerListItem(BaseModel):
     last_order_date: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True

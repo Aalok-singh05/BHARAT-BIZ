@@ -81,8 +81,8 @@ def generate_invoice_pdf(context, output_path):
         data.append([
             item['material'],
             f"{item['qty']}",
-            f"₹{item['rate']}",
-            f"₹{item['amount']}"
+            f"Rs. {item['rate']}",
+            f"Rs. {item['amount']}"
         ])
     
     # Table Styling
@@ -109,9 +109,9 @@ def generate_invoice_pdf(context, output_path):
     total = context.get('total', 0)
 
     totals_data = [
-        ['Subtotal:', f"₹{subtotal}"],
-        ['GST (5%):', f"₹{gst}"],
-        ['Total Amount:', f"₹{total}"]
+        ['Subtotal:', f"Rs. {subtotal}"],
+        ['GST (5%):', f"Rs. {gst}"],
+        ['Total Amount:', f"Rs. {total}"]
     ]
     
     totals_table = Table(totals_data, colWidths=[410, 100])

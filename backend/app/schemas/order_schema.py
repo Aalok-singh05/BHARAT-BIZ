@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 from decimal import Decimal
-from app.schemas.order_item_schema import OrderItemSchema
+from app.schemas.order_item_schema import OrderItem
 
 class OrderListItem(BaseModel):
     order_id: str
@@ -15,7 +15,7 @@ class OrderListItem(BaseModel):
     item_count: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class OrderDetail(BaseModel):
     order_id: str
@@ -34,4 +34,4 @@ class OrderDetail(BaseModel):
     items: List[dict] # Simplified item dict or OrderItemSchema
 
     class Config:
-        orm_mode = True
+        from_attributes = True

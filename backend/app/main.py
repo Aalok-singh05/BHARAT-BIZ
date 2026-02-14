@@ -7,6 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
+load_dotenv()  # Load BEFORE importing other app modules
+
 # Database & models
 from app.database import Base, engine, SessionLocal
 import app.models  # IMPORTANT: loads all models
@@ -28,8 +30,8 @@ from app.router import customer_router
 from app.router import order_history_router
 from app.router import analytics_router
 from app.router import inventory_router
+from app.router import auth_router
 
-load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +61,7 @@ app.include_router(customer_router.router)
 app.include_router(order_history_router.router)
 app.include_router(analytics_router.router)
 app.include_router(inventory_router.router)
+app.include_router(auth_router.router)
 
 
 # ---------------- Startup ---------------- #
@@ -66,6 +69,9 @@ app.include_router(inventory_router.router)
 @app.on_event("startup")
 def on_startup():
     Base.metadata.create_all(bind=engine)
+    
+    from app.router.auth_router import setup_default_user
+    setup_default_user()
 
 
 # ---------------- Schemas ---------------- #
@@ -144,324 +150,8 @@ async def receive_message(request: Request):
 
     return {"status": "received"}
 
-from fastapi import HTTPException
-from sqlalchemy.orm import Session
-from app.database import SessionLocal
-from app.models.order_session import OrderSessionDB
-from app.services.order_session_manager import (
-    get_session_by_order_id,
-    update_workflow_state
-)
-from app.crud.inventory import deduct_inventory_from_batch
-from app.crud.invoice import create_invoice
-from app.integrations.whatsapp import send_whatsapp_message
-from app.workflows.order_states import OrderState
 
 
-# ================================================================
-# 📋 PENDING ORDERS (For Approval Queue Dashboard)
-# ================================================================
-
-@app.get("/orders/pending")
-def get_pending_orders():
-    """
-    Fetch all orders awaiting owner confirmation.
-    Powers the Approval Queue in the Web Dashboard.
-    """
-    from app.models.order_session_item import OrderSessionItemDB
-    from app.models.customer import Customer
-    from app.models.material import Material
-
-    db = SessionLocal()
-
-    try:
-        sessions = (
-            db.query(OrderSessionDB)
-            .filter(OrderSessionDB.workflow_state == OrderState.WAITING_OWNER_CONFIRMATION.value)
-            .order_by(OrderSessionDB.created_at.desc())
-            .all()
-        )
-
-        result = []
-        for session in sessions:
-            # Fetch customer name
-            customer = (
-                db.query(Customer)
-                .filter(Customer.phone_number == session.customer_phone)
-                .first()
-            )
-
-            # Build item list
-            items = []
-            total_estimate = 0
-            for item in session.items:
-                material_name = item.material_name or "Unknown"
-                qty = float(item.normalized_meters or item.input_quantity or 0)
-
-                items.append({
-                    "material": material_name,
-                    "quantity": qty,
-                    "price_per_meter": 0,  # Price resolved at invoice time
-                    "status": item.status or "PENDING"
-                })
-
-            result.append({
-                "order_id": str(session.order_id),
-                "customer_phone": session.customer_phone,
-                "customer_name": customer.business_name if customer else None,
-                "items": items,
-                "total_estimate": float(total_estimate),
-                "created_at": session.created_at.isoformat() if session.created_at else None
-            })
-
-        return {"orders": result, "count": len(result)}
-
-    finally:
-        db.close()
-
-
-@app.post("/orders/{order_id}/approve")
-def approve_order(order_id: str):
-
-    db: Session = SessionLocal()
-
-    try:
-        # -------------------------------------------------
-        # 1️⃣ Fetch session from DB (restart-safe)
-        # -------------------------------------------------
-
-        session = get_session_by_order_id(db, order_id)
-
-        if not session:
-            raise HTTPException(status_code=404, detail="Order session not found")
-
-        # -------------------------------------------------
-        # 2️⃣ Validate workflow state (idempotency guard)
-        # -------------------------------------------------
-
-        db_session = (
-            db.query(OrderSessionDB)
-            .filter(OrderSessionDB.order_id == order_id)
-            .first()
-        )
-
-        if not db_session:
-            raise HTTPException(status_code=404, detail="Session record not found")
-
-        if db_session.workflow_state != OrderState.WAITING_OWNER_CONFIRMATION.value:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Order not awaiting owner confirmation (current: {db_session.workflow_state})"
-            )
-
-        # -------------------------------------------------
-        # 3️⃣ Inventory Deduction & Item Migration
-        # -------------------------------------------------
-
-        from app.models.order_item import OrderItem
-        from app.models.material import Material
-
-        for item in session.items:
-
-            # 3.1 Deduct Inventory using fulfilled_batches
-            if item.fulfilled_batches:
-                for batch in item.fulfilled_batches:
-                    deduct_inventory_from_batch(
-                        db=db,
-                        batch_id=batch["batch_id"],
-                        rolls_to_deduct=batch.get("rolls", 0),
-                        loose_meters_to_deduct=batch.get("loose_meters", 0)
-                    )
-
-            # 3.2 Create Permanent OrderItem Record (Needed for Invoice)
-            # Fetch material ID (assuming material_name is unique/correct)
-            material_id = None
-            mat_name = item.measurement.material_name
-            logger.info(f"Looking up material: {mat_name}")
-            
-            mat_obj = db.query(Material).filter(Material.material_name == mat_name).first()
-            if mat_obj:
-                material_id = mat_obj.material_id
-            else:
-                logger.error(f"Material '{mat_name}' NOT found in DB. Cannot create OrderItem.")
-
-            # If material not found, we skip or error? For now, if missing, we can't create valid OrderItem.
-            if material_id:
-                # Use DB price if available, fallback to 150 if somehow missing (shouldn't happen with default)
-                price = 150.0
-                if mat_obj and hasattr(mat_obj, 'price_per_meter'):
-                     price = float(mat_obj.price_per_meter)
-
-                new_permanent_item = OrderItem(
-                    order_id=order_id,
-                    material_id=material_id,
-                    quantity_meters=item.measurement.normalized_meters,
-                    price_per_meter=price
-                )
-                db.add(new_permanent_item)
-                logger.info(f"Created permanent item for material {mat_name} at price {price}")
-        
-        db.flush() # Persist OrderItems so create_invoice can find them
-        
-        # Verify items exist before invoicing
-        count_items = db.query(OrderItem).filter(OrderItem.order_id == order_id).count()
-        if count_items == 0:
-            raise HTTPException(status_code=500, detail=f"Failed to migrate order items. Check server logs for material lookup failures.")
-
-        # -------------------------------------------------
-        # 4️⃣ Create Invoice
-        # -------------------------------------------------
-
-        invoice = create_invoice(db, order_id)
-
-        # -------------------------------------------------
-        # 5️⃣ Update Workflow State
-        # -------------------------------------------------
-
-        update_workflow_state(db, order_id, OrderState.ORDER_COMPLETED)
-
-        # -------------------------------------------------
-        # 6️⃣ Notify Customer
-        # -------------------------------------------------
-        
-        db.commit() # Atomic commit (Inventory + Invoice + State)
-
-        # -------------------------------------------------
-        # 6️⃣ Notify Customer with Invoice PDF
-        # -------------------------------------------------
-        try:
-            # 1. Fetch Data for PDF
-            customer = db.query(Customer).filter(Customer.phone_number == session.customer_phone).first()
-            customer_name = customer.business_name if customer else "Valued Customer"
-            
-            # Re-query items to get price details
-            pdf_items = []
-            db_items = db.query(OrderItem, Material.material_name).join(Material, OrderItem.material_id == Material.material_id).filter(OrderItem.order_id == order_id).all()
-            
-            for item, mat_name in db_items:
-                pdf_items.append({
-                    "material": mat_name,
-                    "qty": float(item.quantity_meters or 0),
-                    "rate": float(item.price_per_meter or 150),
-                    "amount": float((item.quantity_meters or 0) * (item.price_per_meter or 150))
-                })
-
-            pdf_context = {
-                "invoice_number": invoice.invoice_number,
-                "date": invoice.issued_at.strftime("%Y-%m-%d"),
-                "customer_name": customer_name,
-                "customer_phone": session.customer_phone,
-                "items": pdf_items,
-                "subtotal": float(invoice.total_amount - invoice.gst_amount),
-                "gst": float(invoice.gst_amount),
-                "total": float(invoice.total_amount)
-            }
-            
-            # 2. Generate PDF
-            pdf_filename = f"Invoice_{invoice.invoice_number}.pdf"
-            pdf_path = os.path.join(os.getcwd(), pdf_filename)
-            generate_invoice_pdf(pdf_context, pdf_path)
-            
-            # 3. Upload & Send
-            media_id = upload_media(pdf_path)
-            if media_id:
-                send_document_message(
-                    session.customer_phone,
-                    media_id,
-                    pdf_filename,
-                    caption=f"Billed: ₹{invoice.total_amount}"
-                )
-            else:
-                # Fallback to text if upload fails
-                send_whatsapp_message(
-                    session.customer_phone,
-                    f"Order Approved! Invoice: {invoice.invoice_number}. Total: ₹{invoice.total_amount}"
-                )
-
-            # Cleanup
-            if os.path.exists(pdf_path):
-                os.remove(pdf_path)
-
-        except Exception as notify_ex:
-            logging.error(f"Failed to send invoice PDF: {notify_ex}")
-            send_whatsapp_message(
-                session.customer_phone, 
-                f"Order Approved! Total: ₹{invoice.total_amount}. (Invoice PDF generation failed)"
-            )
-
-        return {
-            "status": "approved",
-            "invoice_number": invoice.invoice_number
-        }
-
-    except Exception as e:
-        db.rollback()
-        raise e
-
-    finally:
-        db.close()
-
-
-@app.post("/orders/{order_id}/reject")
-def reject_order(order_id: str):
-
-    db: Session = SessionLocal()
-
-    try:
-        # -------------------------------------------------
-        # 1️⃣ Fetch session from DB
-        # -------------------------------------------------
-
-        session = get_session_by_order_id(db, order_id)
-
-        if not session:
-            raise HTTPException(status_code=404, detail="Order session not found")
-
-        # -------------------------------------------------
-        # 2️⃣ Validate workflow state
-        # -------------------------------------------------
-
-        db_session = (
-            db.query(OrderSessionDB)
-            .filter(OrderSessionDB.order_id == order_id)
-            .first()
-        )
-
-        if not db_session:
-            raise HTTPException(status_code=404, detail="Session record not found")
-
-        if db_session.workflow_state != OrderState.WAITING_OWNER_CONFIRMATION.value:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Order not awaiting owner confirmation (current: {db_session.workflow_state})"
-            )
-
-        # -------------------------------------------------
-        # 3️⃣ Update Workflow State (no deduction, no invoice)
-        # -------------------------------------------------
-
-        update_workflow_state(db, order_id, OrderState.ORDER_REJECTED)
-
-        # -------------------------------------------------
-        # 4️⃣ Notify Customer
-        # -------------------------------------------------
-        
-        db.commit() # Atomic commit
-
-        send_whatsapp_message(
-            session.customer_phone,
-            "Your order has been rejected by the owner. "
-            "Please contact them for more details."
-        )
-
-        return {"status": "rejected", "order_id": order_id}
-
-    except Exception as e:
-        db.rollback()
-        raise e
-
-    finally:
-        db.close()
 
 
 # ================================================================

@@ -13,7 +13,7 @@ from app.services.order_session_manager import (
     sync_session_items_to_db
 )
 
-from app.schemas.inventory_schema import InventoryBatch
+from app.schemas.inventory_schema import InventoryBatchSchema
 from app.workflows.order_states import OrderState
 
 
@@ -21,7 +21,7 @@ def process_customer_order(
     db: Session,
     message: str,
     customer_phone: str,
-    available_batches: List[InventoryBatch]) -> Dict:
+    available_batches: List[InventoryBatchSchema]) -> Dict:
     """
     Full order processing pipeline with DB-backed OrderSession.
     """

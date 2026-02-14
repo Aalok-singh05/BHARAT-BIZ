@@ -33,13 +33,14 @@ def list_inventory(db: Session = Depends(get_db)):
     for b in batches:
         mat = db.query(Material).filter(Material.material_id == b.material_id).first()
         results.append({
-            "batch_id": b.batch_id,
-            "material_id": b.material_id,
+            "batch_id": str(b.batch_id),
+            "material_id": str(b.material_id),
             "material_name": mat.material_name if mat else "Unknown",
+            "color": b.color,
             "rolls_available": b.rolls_available,
-            "meters_available": float(b.meters_available),
-            "original_meters": float(b.original_meters),
-            "received_at": b.received_at
+            "meters_per_roll": float(b.meters_per_roll),
+            "loose_meters_available": float(b.loose_meters_available),
+            "created_at": b.created_at
         })
     
     return results
@@ -61,7 +62,7 @@ def add_inventory(batch: InventoryBatchCreate, db: Session = Depends(get_db)):
         # Typically default=uuid4.
         material = Material(
             material_name=batch.material_name,
-            total_stock_meters=0.0
+            price_per_meter=150.0 # Default price
         )
         db.add(material)
         db.commit()
@@ -74,15 +75,13 @@ def add_inventory(batch: InventoryBatchCreate, db: Session = Depends(get_db)):
     
     new_batch = InventoryBatch(
         material_id=material.material_id,
+        color=batch.color or "Unknown",
         rolls_available=batch.rolls,
-        meters_available=batch.total_meters,
-        original_meters=batch.total_meters,
-        received_at=datetime.utcnow()
+        meters_per_roll=batch.meters_per_roll,
+        loose_meters_available=0, # Initial batch assumed full rolls
+        created_at=datetime.utcnow()
     )
     
-    # 3. Update Material Total Stock
-    # Assuming material.total_stock_meters tracks aggregate
-    material.total_stock_meters = float(material.total_stock_meters or 0) + batch.total_meters
     
     db.add(new_batch)
     db.commit()

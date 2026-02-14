@@ -20,10 +20,11 @@ class InventoryBatchSchema(BaseModel):
     batch_id: str
     material_id: str
     material_name: Optional[str]
+    color: Optional[str]
     rolls_available: int
-    meters_available: float
-    original_meters: float
-    received_at: datetime
+    meters_per_roll: float
+    loose_meters_available: float
+    created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True

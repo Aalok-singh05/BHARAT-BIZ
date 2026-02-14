@@ -4,7 +4,7 @@ from datetime import datetime
 
 from app.workflows.order_states import OrderState
 from app.schemas.order_item_schema import OrderItem
-from app.schemas.inventory_schema import InventoryBatch
+from app.schemas.inventory_schema import InventoryBatchSchema
 
 class OrderSession(BaseModel):
     """
@@ -18,6 +18,6 @@ class OrderSession(BaseModel):
     workflow_state: OrderState = OrderState.ORDER_INITIATED
     negotiation_pending: bool = False
     owner_approval_required: bool = False
-    available_batches: Optional[List[InventoryBatch]] = None 
+    available_batches: Optional[List[InventoryBatchSchema]] = None 
     created_at: datetime = datetime.utcnow()
     updated_at: Optional[datetime] = None
