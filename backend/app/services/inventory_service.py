@@ -24,6 +24,22 @@ def filter_matching_batches(batches: List[InventoryBatchSchema],
     ]
 
 
+def get_available_colors(batches: List[InventoryBatchSchema],
+                         material_name: str) -> List[str]:
+    """
+    Returns a list of unique colors available for a given material.
+    """
+    colors = set()
+    for batch in batches:
+        if batch.material_name.lower() == material_name.lower():
+            # Only suggest if actual stock exists
+            total_meters = calculate_batch_meters(batch)
+            if total_meters > 0:
+                colors.add(batch.color)
+    
+    return list(colors)
+
+
 def check_inventory(order_item: TextileMeasurement,
                     available_batches: List[InventoryBatchSchema],
                     color: str) -> Dict:

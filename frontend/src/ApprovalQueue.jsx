@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, Clock, Package, AlertTriangle, RefreshCw } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Package, AlertTriangle, RefreshCw, MessageCircle } from 'lucide-react';
+
+// ... (existing code)
+
 
 const API_BASE = '/api';
 
@@ -201,7 +204,18 @@ const ApprovalQueue = () => {
                     {order.customer_name || formatPhone(order.customer_phone)}
                   </h3>
                   <div className="flex items-center gap-4 text-sm text-[#a89d94]">
-                    <span>📱 {formatPhone(order.customer_phone)}</span>
+                    <div className="flex items-center gap-2">
+                      <span>📱 {formatPhone(order.customer_phone)}</span>
+                      <a
+                        href={`https://wa.me/${order.customer_phone.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#4cd964] hover:scale-110 transition-transform"
+                        title="Chat on WhatsApp"
+                      >
+                        <MessageCircle size={16} />
+                      </a>
+                    </div>
                     <span>🕐 {formatDate(order.created_at)}</span>
                   </div>
                 </div>
@@ -219,29 +233,21 @@ const ApprovalQueue = () => {
                   <thead>
                     <tr className="border-b border-[#ff9f43]/10">
                       <th className="text-left p-3 text-[#a89d94] font-semibold">Material</th>
+                      <th className="text-left p-3 text-[#a89d94] font-semibold">Color</th>
                       <th className="text-right p-3 text-[#a89d94] font-semibold">Qty (m)</th>
                       <th className="text-right p-3 text-[#a89d94] font-semibold">Rate (₹/m)</th>
                       <th className="text-right p-3 text-[#a89d94] font-semibold">Amount</th>
-                      <th className="text-center p-3 text-[#a89d94] font-semibold">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {(order.items || []).map((item, i) => (
                       <tr key={i} className="border-b border-white/5 last:border-0">
                         <td className="p-3 font-semibold text-[#f5f3f0]">{item.material}</td>
+                        <td className="p-3 text-[#f5f3f0]">{item.color || 'N/A'}</td>
                         <td className="p-3 text-right text-[#f5f3f0]">{item.quantity}</td>
                         <td className="p-3 text-right text-[#f5f3f0]">₹{item.price_per_meter}</td>
                         <td className="p-3 text-right font-semibold text-[#ffb366]">
                           ₹{((item.quantity || 0) * (item.price_per_meter || 0)).toLocaleString('en-IN')}
-                        </td>
-                        <td className="p-3 text-center">
-                          <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
-                            item.status === 'ACCEPTED'
-                              ? 'bg-[#4cd964]/20 text-[#4cd964] border border-[#4cd964]/40'
-                              : 'bg-[#ff9f43]/20 text-[#ff9f43] border border-[#ff9f43]/40'
-                          }`}>
-                            {item.status}
-                          </span>
                         </td>
                       </tr>
                     ))}

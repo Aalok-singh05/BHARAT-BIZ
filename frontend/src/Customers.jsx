@@ -81,7 +81,19 @@ const Customers = () => {
                                 <tr key={c.phone_number} className="hover:bg-white/[0.02] transition-colors group cursor-pointer" onClick={() => startEdit(c.phone_number)}>
                                     <td className="p-6">
                                         <div className="font-bold text-lg">{c.business_name || 'Unregistered'}</div>
-                                        <div className="text-[10px] text-[#a89d94] font-mono tracking-tighter">{c.phone_number}</div>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <div className="text-[10px] text-[#a89d94] font-mono tracking-tighter">{c.phone_number}</div>
+                                            <a
+                                                href={`https://wa.me/${c.phone_number.replace(/\D/g, '')}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-[#4cd964] hover:scale-110 transition-transform"
+                                                title="Chat on WhatsApp"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /></svg>
+                                            </a>
+                                        </div>
                                     </td>
                                     <td className="p-6">
                                         <div className={`text-xl font-bold ${c.outstanding_balance > 0 ? 'text-[#ff9f43]' : 'text-[#4cd964]'}`}>

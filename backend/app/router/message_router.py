@@ -52,7 +52,7 @@ def route_message(phone: str, message: str) -> str:
                 message=message
             )
 
-            return result.get("message", "Processing...")
+            return result.get("message", "Abhi check karke batata hoon...")
 
         # -------------------------------------------------
         # 2️⃣ FINAL CONFIRMATION FLOW
@@ -65,7 +65,7 @@ def route_message(phone: str, message: str) -> str:
                 message=message
             )
 
-            return result.get("message", "Processing...")
+            return result.get("message", "Abhi check karke batata hoon...")
 
         # -------------------------------------------------
         # 3️⃣ WAITING FOR OWNER FLOW

@@ -21,7 +21,12 @@ def classify_customer_reply(
     prompt_template = load_prompt()
 
     item_list = "\n".join(
-        [f"- {item.material_name}" for item in session_items]
+        [
+            f"- {item.material_name} ({item.color})"
+            if item.color
+            else f"- {item.material_name}"
+            for item in session_items
+        ]
     )
 
     full_prompt = f"""

@@ -31,6 +31,8 @@ from app.router import order_history_router
 from app.router import analytics_router
 from app.router import inventory_router
 from app.router import auth_router
+from app.router import invoice_router
+from app.router import debug_router
 
 
 logger = logging.getLogger(__name__)
@@ -51,7 +53,6 @@ app.add_middleware(
 
 scheduler = BackgroundScheduler()
 scheduler.add_job(check_overdue_customers, "interval", days=7)
-scheduler.add_job(check_overdue_customers, "interval", days=7)
 scheduler.start()
 
 
@@ -62,6 +63,8 @@ app.include_router(order_history_router.router)
 app.include_router(analytics_router.router)
 app.include_router(inventory_router.router)
 app.include_router(auth_router.router)
+app.include_router(invoice_router.router)
+app.include_router(debug_router.router)
 
 
 # ---------------- Startup ---------------- #

@@ -11,7 +11,7 @@ Rules:
 5. Output must follow schema strictly.
 6. If multiple materials exist, return list of items.
 7. Do NOT include explanation text. Only JSON output.
-8. Color MUST be extracted if mentioned. If not mentioned, return "unknown".
+8. Color MUST be extracted if mentioned. If not mentioned, return null.
 
 Example Input:
 "3 roll red cotton 5 meter wala aur 20 meter polyester"

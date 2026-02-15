@@ -20,8 +20,13 @@ def apply_customer_decisions(session, decision_output):
             if item.measurement.material_name.lower() != material.lower():
                 continue
 
-            if decision_color and item.measurement.color.lower() != decision_color.lower():
-                continue
+            current_color = item.measurement.color
+
+            if decision_color:
+                # If item has color, it must match decision
+                if current_color and current_color.lower() != decision_color.lower():
+                    continue
+                # If item has NO color, we allow it to match (filling the blank)
 
             # ---------------- ACCEPT ----------------
             if action == CustomerDecision.ACCEPT_AVAILABLE:

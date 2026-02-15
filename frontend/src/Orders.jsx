@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { MessageCircle } from 'lucide-react';
 
 const Orders = () => {
     const [orders, setOrders] = useState([]);
@@ -130,16 +131,6 @@ const Orders = () => {
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-xl">
                     <div className="absolute inset-0 bg-[#0a0808]/80" onClick={() => setIsDetailModalOpen(false)} />
                     <div className="relative glass-card w-full max-w-3xl p-8 rounded-[2rem] border-[#ff9f43]/30 animate-fadeInUp max-h-[90vh] overflow-y-auto">
-                        <div className="flex justify-between items-start mb-8">
-                            <div>
-                                <h2 className="text-2xl font-bold gradient-text">Order #{selectedOrder.order_id.substring(0, 8)}</h2>
-                                <p className="text-[#a89d94] text-xs">{new Date(selectedOrder.created_at).toLocaleString()}</p>
-                            </div>
-                            <div className={`px-4 py-2 rounded-full font-bold text-xs uppercase border border-current ${getStatusColor(selectedOrder.status)}`}>
-                                {selectedOrder.status}
-                            </div>
-                        </div>
-
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
                             <div className="glass-card p-4 rounded-xl bg-white/5">
                                 <div className="text-xs text-[#a89d94] uppercase">Customer</div>
@@ -159,13 +150,21 @@ const Orders = () => {
                         <h3 className="text-lg font-bold mb-4 border-b border-white/10 pb-2">Items</h3>
                         <div className="space-y-4 mb-8">
                             {selectedOrder.items.map((item, idx) => (
-                                <div key={idx} className="flex justify-between items-center bg-white/[0.02] p-4 rounded-xl">
+                                <div key={idx} className="flex justify-between items-center bg-white/[0.02] p-4 rounded-xl border border-white/5 hover:border-[#ff9f43]/20 transition-colors">
                                     <div>
-                                        {/* Ideally fetch material name, but for now showing quantity if name missing */}
-                                        <div className="font-bold">Material Item {idx + 1}</div>
-                                        <div className="text-xs text-[#a89d94]">Qty: {item.quantity}m @ ₹{item.price}/m</div>
+                                        <div className="font-bold text-lg">{item.material_name}</div>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            {item.color && (
+                                                <span className="px-2 py-0.5 bg-white/10 rounded text-[10px] text-[#f5f3f0] uppercase tracking-wide">
+                                                    {item.color}
+                                                </span>
+                                            )}
+                                            <span className="text-xs text-[#a89d94]">
+                                                {item.quantity}m × ₹{item.price}/m
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div className="font-bold">₹{item.amount.toLocaleString()}</div>
+                                    <div className="font-bold text-[#ff9f43]">₹{item.amount.toLocaleString()}</div>
                                 </div>
                             ))}
                         </div>

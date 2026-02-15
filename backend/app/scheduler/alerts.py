@@ -16,21 +16,31 @@ def check_low_stock_daily():
 
     db: Session = SessionLocal()
     try:
-        low_stock_items = db.query(InventoryBatch).filter(InventoryBatch.rolls_available < 5).all()
+        from app.models.material import Material
         
-        if not low_stock_items:
+        # Explicit JOIN to ensure we get the data
+        results = (
+            db.query(
+                InventoryBatch.batch_id,
+                InventoryBatch.rolls_available, 
+                InventoryBatch.color,
+                Material.material_name
+            )
+            .join(Material, InventoryBatch.material_id == Material.material_id)
+            .filter(InventoryBatch.rolls_available < 5)
+            .all()
+        )
+        
+        if not results:
+            print("No low stock items found.")
             return
 
         # Format Message
         msg_lines = ["⚠️ *Low Stock Alert*"]
-        for batch in low_stock_items:
-            # We ideally want Material Name, but Batch only has batch_id? 
-            # Batch has relationships usually or we join.
-            # InventoryBatch table: batch_id, material_id, etc.
-            # Let's assume we can get name via relationship or lazy load if model has it.
-            # Checking model... InventoryBatch usually has material_id.
-            # For now, listing Batch ID and Rolls.
-            msg_lines.append(f"- {batch.batch_id}: {batch.rolls_available} rolls left")
+        msg_lines.append("") # Empty line
+        
+        for batch_id, rolls, color, mat_name in results:
+            msg_lines.append(f"• *{mat_name}* ({color}): {rolls} rolls left")
         
         msg_lines.append("\nPlease restock soon.")
         

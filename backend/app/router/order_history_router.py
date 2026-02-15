@@ -186,7 +186,13 @@ def approve_order(order_id: str):
             
             if mat_obj:
                 price = float(mat_obj.price_per_meter) if mat_obj.price_per_meter else 150.0
-                new_item = OrderItem(order_id=order_id, material_id=mat_obj.material_id, quantity_meters=item.measurement.normalized_meters, price_per_meter=price)
+                new_item = OrderItem(
+                    order_id=order_id,
+                    material_id=mat_obj.material_id,
+                    quantity_meters=item.measurement.normalized_meters,
+                    price_per_meter=price,
+                    color=item.measurement.color
+                )
                 db.add(new_item)
             else:
                 logger.error(f"Material '{mat_name}' NOT found in DB during approval.")
@@ -271,24 +277,22 @@ def get_order_detail(order_id: str, db: Session = Depends(get_db)):
     
     order, business_name = order_query
     
-    # fetch items
-    items = db.query(OrderItem).filter(OrderItem.order_id == order_id).all()
+    # fetch items with material name
+    items_query = db.query(OrderItem, Material.material_name)\
+        .join(Material, OrderItem.material_id == Material.material_id)\
+        .filter(OrderItem.order_id == order_id).all()
     
     # fetch invoice
     invoice = db.query(Invoice).filter(Invoice.order_id == order_id).first()
     
     items_list = []
-    for i in items:
-        # We need material name. Join? Or just fetch? 
-        # OrderItem usually has material_id.
-        # Let's do lazy load or check model.
-        # Ideally we join Material. 
-        # For MVP, we might just return item data.
+    for item, mat_name in items_query:
         items_list.append({
-            "material_id": str(i.material_id),
-            "quantity": float(i.quantity_meters or 0),
-            "price": float(i.price_per_meter or 0),
-            "amount": float(i.quantity_meters * i.price_per_meter) if i.quantity_meters and i.price_per_meter else 0
+            "material_name": mat_name,
+            "quantity": float(item.quantity_meters or 0),
+            "price": float(item.price_per_meter or 0),
+            "color": item.color,
+            "amount": float((item.quantity_meters or 0) * (item.price_per_meter or 0))
         })
 
     return OrderDetail(

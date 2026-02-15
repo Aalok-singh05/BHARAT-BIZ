@@ -38,6 +38,12 @@ def build_final_summary(session):
                 f"• {m.normalized_meters}m {m.color} {m.material_name}"
             )
 
+    if not summary_lines:
+        return (
+            "No items have been finalized yet.\n"
+            "Kya kuch aur add karna hai?"
+        )
+
     summary = "\n".join(summary_lines)
 
     return (

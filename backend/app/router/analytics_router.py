@@ -49,54 +49,108 @@ def get_analytics_summary(db: Session = Depends(get_db)):
         Order.created_at >= week_start
     ).scalar() or 0
     
+    # 5. Actionable Revenue (Pending Approval)
+    # Sum of items in WAITING_OWNER_CONFIRMATION state
+    # We need to join OrderSessionItemDB -> Material to get price
+    from app.models.order_session import OrderSessionDB
+    from app.models.order_session_item import OrderSessionItemDB
+    from app.models.material import Material
+    from app.models.credit_ledger import CreditLedger
+
+    pending_items = db.query(
+        OrderSessionItemDB.normalized_meters, 
+        Material.price_per_meter
+    ).join(
+        OrderSessionDB, OrderSessionItemDB.order_id == OrderSessionDB.order_id
+    ).join(
+        Material, func.lower(OrderSessionItemDB.material_name) == func.lower(Material.material_name)
+    ).filter(
+        OrderSessionDB.workflow_state == 'WAITING_OWNER_CONFIRMATION'
+    ).all()
+
+    actionable_revenue = sum(
+        (float(item.normalized_meters or 0) * float(item.price_per_meter or 0)) 
+        for item in pending_items
+    )
+    
     return {
         "todayRevenue": float(today_revenue),
         "totalPending": float(pending_payments),
         "lowStockCount": low_stock_count,
-        "weeklyOrders": orders_week
+        "weeklyOrders": orders_week,
+        "actionableRevenue": actionable_revenue
     }
 
 
 @router.get("/revenue")
 def get_revenue_trend(days: int = 7, db: Session = Depends(get_db)):
-    """
-    Get revenue trend for the last N days.
-    """
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=days)
-    
-    # SQLAlchemy grouping by date
-    # Valid for PostgreSQL: func.date_trunc('day', Order.created_at)
-    # Simple approach: fetch all and aggregate in python if volume is low, 
-    # but let's try SQL grouping.
-    
-    results = db.query(
-        func.date_trunc('day', Order.created_at).label('date'),
-        func.sum(Order.total_amount).label('total')
-    ).filter(
+    start_date = datetime.now() - timedelta(days=days)
+
+    # Fetch all completed orders in range
+    orders = db.query(Order).filter(
         Order.created_at >= start_date,
-        Order.status == 'completed' # Only count confirmed revenue
-    ).group_by(
-        func.date_trunc('day', Order.created_at)
-    ).order_by(
-        func.date_trunc('day', Order.created_at)
+        Order.status == 'completed'
     ).all()
-    
-    # Convert to list of dicts {date: 'YYYY-MM-DD', revenue: 100}
-    # And fill missing days with 0
-    
-    data_map = {r.date.strftime('%Y-%m-%d'): float(r.total) for r in results}
+
+    # Aggregate in Python (SQLite friendly)
+    data_map = {}
+    for o in orders:
+        if o.created_at:
+            d_str = o.created_at.strftime('%Y-%m-%d')
+            data_map[d_str] = data_map.get(d_str, 0.0) + float(o.total_amount or 0)
     
     final_data = []
     for i in range(days):
-        d = (start_date + timedelta(days=i+1)).strftime('%Y-%m-%d') # shift to align with result
-        # Actually logic: iterate from (now - days) to now.
-        date_obj = (end_date - timedelta(days=days - 1 - i)).date() # standard approach: today, yesterday...
-        # Let's just go forward from start_date
-        current_d = (start_date + timedelta(days=i)).strftime('%Y-%m-%d')
+        # Generate date string for each day in range
+        # Note: Logic was `start_date + i`. 
+        # Range is [start_date, end_date].
+        current_date = start_date + timedelta(days=i)
+        d_str = current_date.strftime('%Y-%m-%d')
+        
         final_data.append({
-            "date": current_d,
-            "revenue": data_map.get(current_d, 0.0)
+            "date": d_str,
+            "revenue": data_map.get(d_str, 0.0)
         })
         
     return final_data
+
+
+@router.get("/activity")
+def get_recent_activity(db: Session = Depends(get_db)):
+    """
+    Get recent activity feed (Orders & Payments).
+    """
+    from app.models.credit_ledger import CreditLedger
+    
+    # 1. Recent Orders
+    recent_orders = db.query(Order, Customer.business_name).outerjoin(Customer, Order.customer_phone == Customer.phone_number).order_by(Order.created_at.desc()).limit(5).all()
+    
+    # 2. Recent Payments
+    recent_payments = db.query(CreditLedger, Customer.business_name).outerjoin(Customer, CreditLedger.customer_phone == Customer.phone_number).filter(CreditLedger.type == 'payment').order_by(CreditLedger.created_at.desc()).limit(5).all()
+    
+    activity = []
+    
+    for order, customer_name in recent_orders:
+        activity.append({
+            "type": "ORDER",
+            "id": str(order.order_id),
+            "amount": float(order.total_amount or 0),
+            "customer": customer_name or "Unknown",
+            "date": order.created_at,
+            "status": order.status
+        })
+        
+    for payment, customer_name in recent_payments:
+        activity.append({
+            "type": "PAYMENT",
+            "id": str(payment.transaction_id),
+            "amount": float(payment.amount or 0),
+            "customer": customer_name or "Unknown",
+            "date": payment.created_at,
+            "status": "received"
+        })
+        
+    # Sort by date DESC
+    activity.sort(key=lambda x: x["date"], reverse=True)
+    
+    return activity[:10]

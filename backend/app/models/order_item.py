@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, Numeric, ForeignKey
+from sqlalchemy import Column, Numeric, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
 from app.database import Base
 
@@ -23,3 +23,4 @@ class OrderItem(Base):
 
     quantity_meters = Column(Numeric, nullable=False)
     price_per_meter = Column(Numeric, nullable=False)
+    color = Column(String, nullable=True)
