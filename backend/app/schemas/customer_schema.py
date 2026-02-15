@@ -20,12 +20,25 @@ class CustomerOrderSummary(BaseModel):
     class Config:
         from_attributes = True
 
+class PaymentHistory(BaseModel):
+    transaction_id: str
+    amount: float
+    type: str # 'credit' or 'payment'
+    date: datetime
+
+    class Config:
+        from_attributes = True
+
 class CustomerDetail(CustomerBase):
     phone_number: str
+    business_name: Optional[str] = None
     outstanding_balance: float
+    credit_limit: float
+    lifetime_value: float = 0.0
     last_reminder_date: Optional[datetime] = None
     created_at: datetime
     recent_orders: List[CustomerOrderSummary] = []
+    payment_history: List[PaymentHistory] = []
 
     class Config:
         from_attributes = True

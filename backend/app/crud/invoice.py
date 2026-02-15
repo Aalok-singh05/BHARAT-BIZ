@@ -119,4 +119,9 @@ def create_invoice(db: Session, order_id):
         amount=total_amount
     )
 
+    # 🔄 SYNC ORDER TOTAL
+    # Ensure the main Order table reflects the final invoiced amount
+    order.total_amount = total_amount
+    db.flush()
+
     return invoice

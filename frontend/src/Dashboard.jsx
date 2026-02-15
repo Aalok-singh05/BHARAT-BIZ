@@ -18,30 +18,32 @@ const MerchantDashboard = () => {
     fetchAnalytics();
   }, []);
 
-  const fetchAnalytics = async () => {
+  const fetchEndpoint = async (url, setter) => {
     try {
-      const [summaryRes, trendRes, activityRes] = await Promise.all([
-        fetch('http://localhost:8000/analytics/summary'),
-        fetch('http://localhost:8000/analytics/revenue?days=7'),
-        fetch('http://localhost:8000/analytics/activity')
-      ]);
-
-      const summary = await summaryRes.json();
-      const trend = await trendRes.json();
-      const activity = await activityRes.json();
-
-      setMetrics(summary);
-      setRevenueTrend(trend);
-      setRecentActivity(activity);
-      setLoading(false);
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        setter(data);
+      }
     } catch (err) {
-      console.error("Failed to fetch analytics", err);
-      setLoading(false);
+      console.error(`Failed to fetch ${url}`, err);
     }
   };
 
-  // Find max revenue for chart scaling
-  const maxRevenue = Math.max(...revenueTrend.map(d => d.revenue), 1000);
+  const fetchAnalytics = async () => {
+    await Promise.all([
+      fetchEndpoint('http://localhost:8000/analytics/summary', setMetrics),
+      fetchEndpoint('http://localhost:8000/analytics/revenue?days=7', (data) => setRevenueTrend(Array.isArray(data) ? data : [])),
+      fetchEndpoint('http://localhost:8000/analytics/activity', (data) => setRecentActivity(Array.isArray(data) ? data : []))
+    ]);
+    setLoading(false);
+  };
+
+  // Find max revenue for chart scaling (Dynamic)
+  const dataValues = Array.isArray(revenueTrend) ? revenueTrend.map(d => d.revenue || 0) : [];
+  const maxVal = dataValues.length > 0 ? Math.max(...dataValues) : 0;
+  // If max is 0 (no sales), default to 100 scale. If > 0, use exact max (so highest bar is 100% height)
+  const maxRevenue = maxVal > 0 ? maxVal : 100;
 
   return (
     <div className="min-h-screen bg-[#0a0808] text-[#f5f3f0] p-6 md:p-12 pt-24 font-sans relative overflow-x-hidden">
@@ -93,27 +95,51 @@ const MerchantDashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fadeInUp">
 
           {/* Revenue Chart */}
-          <div className="lg:col-span-2 glass-card rounded-[2.5rem] p-8 border-white/5 flex flex-col justify-between h-full min-h-[450px] relative z-0">
+          <div className="lg:col-span-2 glass-card rounded-[2.5rem] p-8 border-white/5 flex flex-col justify-between h-full min-h-[450px] relative isolate">
             <h3 className="text-xl font-bold mb-8">Revenue Trend (Last 7 Days)</h3>
 
-            <div className="h-64 flex items-end justify-between gap-4">
-              {revenueTrend.map((day, idx) => (
-                <div key={idx} className="flex-1 flex flex-col justify-end items-center gap-2 group">
-                  <div
-                    className="w-full bg-[#ff9f43]/20 rounded-t-xl transition-all duration-500 hover:bg-[#ff9f43] relative"
-                    style={{ height: `${(day.revenue / maxRevenue) * 100}%`, minHeight: '4px' }}
-                  >
-                    {/* Tooltip */}
-                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-black/80 px-2 py-1 rounded text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                      ₹{day.revenue.toLocaleString()}
+            {/* Chart Container */}
+            <div className="flex-1 flex items-end justify-between gap-3 h-64 w-full">
+
+              {/* Empty State */}
+              {!loading && revenueTrend.every(d => (d.revenue || 0) === 0) && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-[#a89d94] z-10">
+                  <p className="text-sm">No revenue data for this period.</p>
+                </div>
+              )}
+
+              {/* Bars */}
+              {revenueTrend.map((day, idx) => {
+                const rev = day.revenue || 0;
+                const heightPct = maxRevenue > 0 ? (rev / maxRevenue) * 100 : 0;
+
+                return (
+                  <div key={idx} className="flex-1 flex flex-col justify-end items-center gap-2 group h-full relative">
+
+                    {/* Value Label (Visible on hover or if > 0) */}
+                    <div className={`text-[10px] font-bold mb-1 transition-all ${rev > 0 ? 'text-[#ff9f43]' : 'text-transparent group-hover:text-[#ff9f43]'}`}>
+                      ₹{rev >= 1000 ? (rev / 1000).toFixed(1) + 'k' : rev}
+                    </div>
+
+                    {/* Bar Track */}
+                    <div className="w-full h-full bg-white/[0.02] rounded-t-xl relative overflow-hidden flex items-end">
+                      {/* Bar Fill */}
+                      <div
+                        className="w-full bg-gradient-to-t from-[#ff9f43]/40 to-[#ff9f43] rounded-t-xl transition-all duration-700 ease-out relative group-hover:brightness-110"
+                        style={{ height: `${Math.max(heightPct, rev > 0 ? 5 : 0)}%` }} // Min 5% height if value exists
+                      >
+                        {/* Glow Effect */}
+                        <div className="absolute top-0 left-0 right-0 h-1 bg-white/20" />
+                      </div>
+                    </div>
+
+                    {/* Date Label */}
+                    <div className="text-[10px] text-[#a89d94] font-mono mt-2">
+                      {new Date(day.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
                     </div>
                   </div>
-                  <div className="text-[10px] text-[#a89d94] font-mono">{new Date(day.date).getDate()}</div>
-                </div>
-              ))}
-              {revenueTrend.length === 0 && !loading && (
-                <div className="w-full h-full flex items-center justify-center text-[#a89d94]">No revenue data available.</div>
-              )}
+                );
+              })}
             </div>
           </div>
 
@@ -121,7 +147,7 @@ const MerchantDashboard = () => {
           <div className="space-y-6">
 
             {/* Quick Actions */}
-            <div className="glass-card rounded-[2.5rem] p-6 border-white/5 flex flex-col gap-4 relative z-0">
+            <div className="glass-card rounded-[2.5rem] p-6 border-white/5 flex flex-col gap-4 relative isolate">
               <h3 className="text-lg font-bold">Quick Actions</h3>
               <div className="flex gap-4">
                 <Link to="/approvals" className="flex-1 p-3 bg-[#ff9f43]/20 text-[#ff9f43] rounded-xl hover:bg-[#ff9f43]/30 text-center text-xs font-bold transition-colors flex flex-col items-center gap-2 group">
@@ -140,7 +166,7 @@ const MerchantDashboard = () => {
             </div>
 
             {/* Recent Activity Feed */}
-            <div className="glass-card rounded-[2.5rem] p-6 border-white/5 h-[380px] flex flex-col relative z-0 overflow-hidden">
+            <div className="glass-card rounded-[2.5rem] p-6 border-white/5 h-[380px] flex flex-col relative isolate overflow-hidden">
               <h3 className="text-xl font-bold mb-6 shrink-0">Recent Activity</h3>
               <div className="space-y-6 overflow-y-auto pr-2 custom-scrollbar">
                 {recentActivity.map((item, i) => (

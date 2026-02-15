@@ -3,5 +3,9 @@ uvicorn
 sqlalchemy
 psycopg2-binary
 python-dotenv
+requests
+python-multipart
 reportlab
 apscheduler
+langchain-google-genai
+langchain

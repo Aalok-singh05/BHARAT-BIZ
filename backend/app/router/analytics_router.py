@@ -1,14 +1,15 @@
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from datetime import date, datetime, timedelta
 from app.database import SessionLocal
 from app.models.order import Order
-from app.models.customer import Customer
+from app.models.material import Material
 from app.models.inventory import InventoryBatch
-from datetime import datetime, timedelta, date
+from app.models.credit_ledger import CreditLedger
+from typing import List, Dict, Any
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
-
 
 def get_db():
     db = SessionLocal()
@@ -17,140 +18,262 @@ def get_db():
     finally:
         db.close()
 
+# ... (imports)
 
 @router.get("/summary")
 def get_analytics_summary(db: Session = Depends(get_db)):
     """
-    Get summary metrics for the dashboard.
+    Returns high-level metrics for the dashboard.
     """
-    now = datetime.now()
-    today_start = datetime(now.year, now.month, now.day)
+    today = date.today()
+    start_of_day = datetime.combine(today, datetime.min.time())
     
-    # 1. Today's Revenue
-    # Sum of completed orders today
-    today_revenue = db.query(func.sum(Order.total_amount)).filter(
-        Order.created_at >= today_start,
-        Order.status == 'completed' # or whatever "approved" status is final
-    ).scalar() or 0.0
-    
-    # 2. Total Pending Payments
-    # Sum of customer outstanding balances
-    pending_payments = db.query(func.sum(Customer.outstanding_balance)).scalar() or 0.0
-    
-    # 3. Low Stock Items
-    # Count of batches with < 5 rolls (arbitrary threshold)
-    low_stock_count = db.query(func.count(InventoryBatch.batch_id)).filter(
-        InventoryBatch.rolls_available < 5
-    ).scalar() or 0
-    
-    # 4. Orders This Week
-    week_start = now - timedelta(days=7)
-    orders_week = db.query(func.count(Order.order_id)).filter(
-        Order.created_at >= week_start
-    ).scalar() or 0
-    
-    # 5. Actionable Revenue (Pending Approval)
-    # Sum of items in WAITING_OWNER_CONFIRMATION state
-    # We need to join OrderSessionItemDB -> Material to get price
-    from app.models.order_session import OrderSessionDB
-    from app.models.order_session_item import OrderSessionItemDB
-    from app.models.material import Material
-    from app.models.credit_ledger import CreditLedger
+    # Valid revenue states: Customer Confirmed or Completed
+    REVENUE_STATES = ['PENDING_APPROVAL', 'COMPLETED']
 
-    pending_items = db.query(
-        OrderSessionItemDB.normalized_meters, 
-        Material.price_per_meter
-    ).join(
-        OrderSessionDB, OrderSessionItemDB.order_id == OrderSessionDB.order_id
-    ).join(
-        Material, func.lower(OrderSessionItemDB.material_name) == func.lower(Material.material_name)
-    ).filter(
-        OrderSessionDB.workflow_state == 'WAITING_OWNER_CONFIRMATION'
-    ).all()
+    # 1. Today's Revenue (Booked + Realized)
+    today_revenue = db.query(func.sum(Order.total_amount))\
+        .filter(Order.created_at >= start_of_day)\
+        .filter(Order.status.in_(REVENUE_STATES))\
+        .scalar() or 0.0
 
-    actionable_revenue = sum(
-        (float(item.normalized_meters or 0) * float(item.price_per_meter or 0)) 
-        for item in pending_items
-    )
-    
+    # 2. Total Pending Payments (Outstanding Balance of all customers)
+    from app.models.customer import Customer
+    total_outstanding = db.query(func.sum(Customer.outstanding_balance)).scalar() or 0.0
+
+    # 3. Actionable Revenue (Orders waiting for approval)
+    actionable_revenue = db.query(func.sum(Order.total_amount))\
+        .filter(Order.status == 'PENDING_APPROVAL')\
+        .scalar() or 0.0
+
+    # 4. Low Stock Count (Materials + Color variant with < 10 rolls total)
+    # Matching logic with Business Memory page
+    low_stock_count_subquery = db.query(
+            Material.material_id,
+            InventoryBatch.color,
+            func.coalesce(func.sum(InventoryBatch.rolls_available), 0).label("total_rolls")
+        )\
+        .outerjoin(InventoryBatch, Material.material_id == InventoryBatch.material_id)\
+        .group_by(Material.material_id, InventoryBatch.color)\
+        .subquery()
+
+    low_stock_count = db.query(func.count())\
+        .select_from(low_stock_count_subquery)\
+        .filter(low_stock_count_subquery.c.total_rolls < 10)\
+        .scalar() or 0
+
     return {
         "todayRevenue": float(today_revenue),
-        "totalPending": float(pending_payments),
+        "totalPending": float(total_outstanding),
+        "actionableRevenue": float(actionable_revenue),
         "lowStockCount": low_stock_count,
-        "weeklyOrders": orders_week,
-        "actionableRevenue": actionable_revenue
+        "weeklyOrders": 0 
     }
-
 
 @router.get("/revenue")
 def get_revenue_trend(days: int = 7, db: Session = Depends(get_db)):
-    start_date = datetime.now() - timedelta(days=days)
-
-    # Fetch all completed orders in range
-    orders = db.query(Order).filter(
-        Order.created_at >= start_date,
-        Order.status == 'completed'
-    ).all()
-
-    # Aggregate in Python (SQLite friendly)
-    data_map = {}
-    for o in orders:
-        if o.created_at:
-            d_str = o.created_at.strftime('%Y-%m-%d')
-            data_map[d_str] = data_map.get(d_str, 0.0) + float(o.total_amount or 0)
+    """
+    Returns daily revenue for the last N days.
+    Revenue = Confirmed Orders (Pending Approval + Completed).
+    """
+    end_date = date.today()
+    start_date = end_date - timedelta(days=days-1)
     
-    final_data = []
-    for i in range(days):
-        # Generate date string for each day in range
-        # Note: Logic was `start_date + i`. 
-        # Range is [start_date, end_date].
-        current_date = start_date + timedelta(days=i)
-        d_str = current_date.strftime('%Y-%m-%d')
-        
-        final_data.append({
-            "date": d_str,
-            "revenue": data_map.get(d_str, 0.0)
-        })
-        
-    return final_data
+    REVENUE_STATES = ['PENDING_APPROVAL', 'COMPLETED']
 
+    # Ensure start_date is timezone-aware UTC datetime
+    # Order.created_at is UTC. date.today() is local.
+    # If we use datetime.combine(start_date, min.time()), we get naive datetime.
+    # When comparing naive (if so) vs aware (DB), SQLAlchemy might assume local.
+    # Safe fix: Convert input date range to CUTOFF in UTC.
+    
+    cutoff_dt_naive = datetime.combine(start_date, datetime.min.time())
+    
+    # Ideally we should use timezone aware, but for simplicity let's compare Date(Order.created_at)
+    # Actually, grouping by date function is safer if we trust DB timezone configuration.
+    # But usually DB stores UTC. So Group By Date might group by UTC day.
+    # Which is fine.
+    
+    # Let's trust the date comparison but ensure we don't accidentally filter out today's records due to timezone drift.
+    # Using start_date directly might be enough?
+    # db.query( ... ).filter(func.date(Order.created_at) >= start_date)
+    
+    results = db.query(
+        func.date(Order.created_at).label('date'),
+        func.sum(Order.total_amount).label('revenue')
+    ).filter(func.date(Order.created_at) >= start_date)\
+     .filter(Order.status.in_(REVENUE_STATES))\
+     .group_by(func.date(Order.created_at))\
+     .all()
+
+    # Fill missing dates with 0
+    data = {}
+    for r in results:
+        data[str(r.date)] = float(r.revenue or 0.0)
+
+    trend = []
+    current = start_date
+    while current <= end_date:
+        d_str = str(current)
+        trend.append({
+            "date": d_str,
+            "revenue": data.get(d_str, 0.0)
+        })
+        current += timedelta(days=1)
+        
+    return trend
 
 @router.get("/activity")
 def get_recent_activity(db: Session = Depends(get_db)):
     """
-    Get recent activity feed (Orders & Payments).
+    Returns recent orders and payments for the activity feed.
     """
-    from app.models.credit_ledger import CreditLedger
+    # Orders (Show only confirmed ones)
+    REVENUE_STATES = ['PENDING_APPROVAL', 'COMPLETED']
+    recent_orders = db.query(Order)\
+        .filter(Order.status.in_(REVENUE_STATES))\
+        .order_by(Order.created_at.desc())\
+        .limit(10).all()
     
-    # 1. Recent Orders
-    recent_orders = db.query(Order, Customer.business_name).outerjoin(Customer, Order.customer_phone == Customer.phone_number).order_by(Order.created_at.desc()).limit(5).all()
-    
-    # 2. Recent Payments
-    recent_payments = db.query(CreditLedger, Customer.business_name).outerjoin(Customer, CreditLedger.customer_phone == Customer.phone_number).filter(CreditLedger.type == 'payment').order_by(CreditLedger.created_at.desc()).limit(5).all()
-    
+    # Payments
+    recent_payments = db.query(CreditLedger)\
+        .filter(CreditLedger.type == 'payment')\
+        .order_by(CreditLedger.created_at.desc())\
+        .limit(10).all()
+
     activity = []
     
-    for order, customer_name in recent_orders:
+    for o in recent_orders:
         activity.append({
             "type": "ORDER",
-            "id": str(order.order_id),
-            "amount": float(order.total_amount or 0),
-            "customer": customer_name or "Unknown",
-            "date": order.created_at,
-            "status": order.status
+            "date": o.created_at,
+            "amount": float(o.total_amount or 0),
+            "customer": o.customer_phone 
         })
         
-    for payment, customer_name in recent_payments:
+    for p in recent_payments:
         activity.append({
             "type": "PAYMENT",
-            "id": str(payment.transaction_id),
-            "amount": float(payment.amount or 0),
-            "customer": customer_name or "Unknown",
-            "date": payment.created_at,
-            "status": "received"
+            "date": p.created_at,
+            "amount": float(p.amount),
+            "customer": p.customer_phone
         })
-        
-    # Sort by date DESC
-    activity.sort(key=lambda x: x["date"], reverse=True)
     
-    return activity[:10]
+    # Sort combined list by date desc
+    activity.sort(key=lambda x: x['date'], reverse=True)
+    
+    return activity[:10] # Return top 10 combined
+
+@router.get("/business-memory")
+# ... (rest of the file)
+def get_business_memory(view_type: str = 'month', selected_date: str = None, db: Session = Depends(get_db)):
+    """
+    Returns aggregated business stats for 'Business Memory' page.
+    view_type: 'month' (current month) or 'date' (specific date)
+    """
+    today = date.today()
+    
+    # --- 1. Date Range Logic ---
+    if view_type == 'date' and selected_date:
+        target_date = datetime.strptime(selected_date, "%Y-%m-%d").date()
+        start_dt = datetime.combine(target_date, datetime.min.time())
+        end_dt = datetime.combine(target_date, datetime.max.time())
+        period_label = target_date.strftime("%B %d, %Y")
+    else:
+        # Default to current month
+        start_dt = datetime(today.year, today.month, 1)
+        # End of current month (trick: start of next month)
+        if today.month == 12:
+            end_dt = datetime(today.year + 1, 1, 1)
+        else:
+            end_dt = datetime(today.year, today.month + 1, 1)
+        period_label = start_dt.strftime("%B %Y")
+
+    # --- 2. Revenue & Orders Stats ---
+    # Valid revenue states: Customer Confirmed (Booked) or Completed (Realized)
+    REVENUE_STATES = ['PENDING_APPROVAL', 'COMPLETED']
+
+    # Total Revenue
+    revenue = db.query(func.sum(Order.total_amount))\
+        .filter(Order.created_at >= start_dt, Order.created_at < end_dt)\
+        .filter(Order.status.in_(REVENUE_STATES))\
+        .scalar() or 0.0
+
+    # Counts
+    success_count = db.query(func.count(Order.order_id))\
+        .filter(Order.created_at >= start_dt, Order.created_at < end_dt)\
+        .filter(Order.status.in_(REVENUE_STATES))\
+        .scalar() or 0
+
+    cancelled_count = db.query(func.count(Order.order_id))\
+        .filter(Order.created_at >= start_dt, Order.created_at < end_dt)\
+        .filter(Order.status.in_(['cancelled', 'rejected', 'REJECTED']))\
+        .scalar() or 0
+
+    # Offline vs Online (Logic: If created by 'system' or specific user? 
+    # For now, let's assume all are 'Online' via Bot unless we add a 'source' column.
+    # We can fake a split for demo or use payment_status 'cash' vs 'upi' if we had it.
+    # Let's just return total for now).
+    online_rev = revenue # All is online for now
+    offline_rev = 0
+
+    # --- 3. Inventory Health (Real Time) ---
+    # Low stock items (< 10 rolls)
+    # Note: sum rolls if multiple batches exist for same material? 
+    # For simplicity, let's just check batches. ideally we should aggregate by material.
+    
+    # Low stock items (< 10 rolls) per Color
+    # Use LEFT JOIN to catch materials with NO batches (0 stock)
+    low_stock_items = db.query(
+            Material.material_name,
+            InventoryBatch.color,
+            func.coalesce(func.sum(InventoryBatch.rolls_available), 0).label("total_rolls")
+        )\
+        .outerjoin(InventoryBatch, Material.material_id == InventoryBatch.material_id)\
+        .group_by(Material.material_name, InventoryBatch.color)\
+        .having(func.coalesce(func.sum(InventoryBatch.rolls_available), 0) < 10)\
+        .limit(10).all()
+
+    inventory_alerts = []
+    for name, color, rolls in low_stock_items:
+        # Format item name as "Material (Color)" or just "Material" if color is None
+        display_name = f"{name} ({color})" if color else name
+        
+        inventory_alerts.append({
+            "item": display_name,
+            "stock": rolls,
+            "threshold": 10, 
+            "status": "Low Stock" if rolls > 0 else "Out of Stock",
+            "demand": "High" 
+        })
+
+    # --- 4. Recent/Specific Transactions ---
+    # Fetch orders in the period
+    transactions_db = db.query(Order).filter(Order.created_at >= start_dt, Order.created_at < end_dt)\
+        .order_by(Order.created_at.desc())\
+        .limit(50).all() # Limit to avoid overload
+
+    transactions = []
+    for t in transactions_db:
+        transactions.append({
+            "id": str(t.order_id),
+            "customer": t.customer_phone, # Show phone if name not available (would need join)
+            "amount": float(t.total_amount),
+            "type": "Online", # Placeholder
+            "time": t.created_at.strftime("%I:%M %p"),
+            "date": t.created_at.strftime("%Y-%m-%d"),
+            "status": t.status.capitalize()
+        })
+
+    return {
+        "period": period_label,
+        "stats": {
+            "totalRevenue": float(revenue),
+            "online": float(online_rev),
+            "offline": float(offline_rev),
+            "success": success_count,
+            "cancelled": cancelled_count
+        },
+        "inventory": inventory_alerts,
+        "transactions": transactions
+    }

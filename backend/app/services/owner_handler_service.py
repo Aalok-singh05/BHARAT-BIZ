@@ -9,6 +9,8 @@ Commands:
 from app.database import SessionLocal
 from app.router.order_history_router import approve_order, reject_order
 from app.models.order_session import OrderSessionDB
+from sqlalchemy import func, String
+import os
 
 def handle_owner_message(message: str) -> str:
     """
@@ -98,6 +100,50 @@ def handle_owner_message(message: str) -> str:
             except Exception as e:
                 return f"❌ Rejection Failed: {str(e)}"
 
+        elif command == "SEND":
+            # Forward Invoice to Customer
+            if len(parts) < 2:
+                return "❌ Usage: SEND <ID> (First 5 chars ok)"
+
+            identifier = parts[1]
+            from app.models.order import Order
+            from app.models.invoice import Invoice
+            from app.integrations.whatsapp import upload_media, send_document_message, send_whatsapp_message
+
+            # Find Order
+            # Logic similar to resolve_order but searching COMPLETED orders too?
+            # Actually, invoices are only for APPROVED/COMPLETED orders.
+            # Let's search by ID directly.
+            
+            # Try to find order by ID starting with identifier
+            order = db.query(Order).filter(func.cast(Order.order_id, String).startswith(identifier.lower())).first()
+            
+            if not order:
+                 return f"❌ Order '{identifier}' not found."
+
+            # Find Invoice
+            invoice = db.query(Invoice).filter(Invoice.order_id == order.order_id).first()
+            if not invoice:
+                return f"❌ No invoice found for Order {identifier}."
+
+            if not invoice.pdf_path or not os.path.exists(invoice.pdf_path):
+                return "❌ Invoice PDF file missing on server."
+
+            # Send to Customer
+            try:
+                mid = upload_media(invoice.pdf_path)
+                if mid:
+                    caption = (
+                        f"🧾 Here is your invoice for Order #{invoice.invoice_number}.\n"
+                        f"Amount: ₹{invoice.total_amount}"
+                    )
+                    send_document_message(order.customer_phone, mid, os.path.basename(invoice.pdf_path), caption=caption)
+                    return f"✅ Invoice sent to {order.customer_phone}."
+                else:
+                    return "❌ Failed to upload PDF to WhatsApp."
+            except Exception as e:
+                return f"❌ Sending failed: {str(e)}"
+    
         elif command in ["HELP", "MENU"]:
             return (
                 "🤖 *Owner Bot Commands*\n\n"
@@ -105,6 +151,7 @@ def handle_owner_message(message: str) -> str:
                 "✅ `APPROVE <ID>` - Approve specific order\n"
                 "🚫 *NO* - Reject latest pending order\n"
                 "🚫 `REJECT <ID>` - Reject specific order\n"
+                "📨 `SEND <ID>` - Send invoice to customer\n"
                 "📊 `PENDING` - View pending list\n"
             )
         

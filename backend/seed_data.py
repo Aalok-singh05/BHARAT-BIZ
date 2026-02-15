@@ -1,6 +1,6 @@
 import sys
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 # Ensure 'app' module is found
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -37,9 +37,9 @@ def seed_data():
     try:
         print("🌱 Seeding Materials...")
         materials_data = [
-            {"name": "Cotton 60x60", "price": 120.0, "category": "Cotton"},
-            {"name": "Rayon 14kg", "price": 140.0, "category": "Rayon"},
-            {"name": "Satin Silk", "price": 250.0, "category": "Silk"},
+            {"name": "Cotton", "price": 120.0, "category": "Cotton"},
+            {"name": "Rayon", "price": 140.0, "category": "Rayon"},
+            {"name": "Silk", "price": 250.0, "category": "Silk"},
             {"name": "Crepe", "price": 180.0, "category": "Synthetic"},
             {"name": "Muslin", "price": 200.0, "category": "Cotton"},
         ]
@@ -74,7 +74,7 @@ def seed_data():
                     loose_meters_available=0,
                     # meters_available removed, original_meters removed as they don't exist in model
                     # total stock calculation is done on material
-                    received_at=datetime.utcnow() - timedelta(days=i*2)
+                    created_at=datetime.now(timezone.utc) - timedelta(days=i*2)
                 )
                 db.add(batch)
                 

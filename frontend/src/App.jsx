@@ -3,7 +3,7 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 
 import Demo from './Demo.jsx';
 import Document from './Documents.jsx';
-import BusinessMemory from './BussinessMemory.jsx';
+import BusinessMemory from './BusinessMemory.jsx';
 import InventoryManagement from './InventoryManagement.jsx';
 import MerchantDashboard from './Dashboard.jsx'; // Ensure file exists
 import Sidebar from './Sidebar.jsx';

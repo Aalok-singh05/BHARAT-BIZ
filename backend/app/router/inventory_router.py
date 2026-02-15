@@ -52,21 +52,13 @@ def add_inventory(batch: InventoryBatchCreate, db: Session = Depends(get_db)):
     Add new inventory batch.
     Creates Material if it doesn't exist.
     """
-    # 1. Find or Create Material
+    # 1. Find Material (Strict Check)
     material = db.query(Material).filter(Material.material_name == batch.material_name).first()
     if not material:
-        # Create new material
-        # Assuming ID generation is handled by DB or model (UUID)
-        # Material model usually takes name.
-        # Let's check Material model... It has ID default? 
-        # Typically default=uuid4.
-        material = Material(
-            material_name=batch.material_name,
-            price_per_meter=150.0 # Default price
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Material '{batch.material_name}' not found. Please add it to 'Material Prices' first."
         )
-        db.add(material)
-        db.commit()
-        db.refresh(material)
     
     # 2. Create Batch
     # Batch ID generation? Model default? 

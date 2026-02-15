@@ -148,7 +148,48 @@ def handle_final_confirmation_message(db: Session, customer_phone: str, message:
     # STEP 3 — CONFIRM ORDER
     # -------------------------------------------------
 
+    # -------------------------------------------------
+    # STEP 3 — CONFIRM ORDER
+    # -------------------------------------------------
+
     if global_intent == "confirm_order":
+
+        # -------------------------------------------------
+        # CALCULATE & SAVE ESTIMATED TOTAL
+        # -------------------------------------------------
+        from app.models.order import Order
+        from app.models.material import Material
+        from sqlalchemy import func
+
+        total_amount = 0.0
+        
+        for item in session.items:
+            # Skip cancelled/replaced items
+            if item.status in [OrderItemStatus.CANCELLED, OrderItemStatus.REPLACED]:
+                continue
+                
+            qty = float(item.measurement.normalized_meters or item.measurement.input_quantity or 0)
+            mat_name = item.measurement.material_name
+
+            # Lookup Price
+            mat_obj = db.query(Material).filter(func.lower(Material.material_name) == mat_name.lower()).first()
+            price = float(mat_obj.price_per_meter) if mat_obj and mat_obj.price_per_meter else 0.0
+            
+            # If price is 0, maybe use a default? Or leave it (it's an estimate).
+            # Let's use 150.0 as generic fallback if needed, or 0.
+            if price == 0: price = 150.0 
+
+            total_amount += qty * price
+
+        # Update Order Table
+        order = db.query(Order).filter(Order.order_id == session.order_id).first()
+        if order:
+            order.total_amount = total_amount
+            # Status will be updated by update_workflow_state
+        
+        # -------------------------------------------------
+        # UPDATE WORKFLOW
+        # -------------------------------------------------
 
         update_workflow_state(
             db,
@@ -172,7 +213,8 @@ def handle_final_confirmation_message(db: Session, customer_phone: str, message:
             alert_msg = (
                 f"🚨 *New Order Alert*\n"
                 f"Customer: {customer_phone}\n"
-                f"Order ID: `{session.order_id}`\n\n"
+                f"Order ID: `{session.order_id}`\n"
+                f"Amount: ₹{total_amount:,.2f}\n\n"
                 f"👉 Reply *YES* to approve instantly.\n"
                 f"👉 Or `APPROVE {short_id}` / `REJECT {short_id}`"
             )

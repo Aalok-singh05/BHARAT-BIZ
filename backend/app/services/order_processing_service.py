@@ -32,6 +32,80 @@ def process_customer_order(
     # Create DB-backed Order Session after successful extraction
     session = create_order_session(db, customer_phone, extracted_items)
 
+    # -------------------------------------------------
+    # 🚨 PROACTIVE OVERDUE CHECK
+    # -------------------------------------------------
+    from app.models.customer import Customer
+    from app.models.credit_ledger import CreditLedger
+    from datetime import datetime, timedelta
+    from app.integrations.whatsapp import send_whatsapp_message
+    import os
+
+    customer = db.query(Customer).filter(Customer.phone_number == customer_phone).first()
+    
+    if customer and customer.outstanding_balance > 0:
+        # Check last payment date
+        last_payment = (
+            db.query(CreditLedger)
+            .filter(CreditLedger.customer_phone == customer_phone, CreditLedger.type == "payment")
+            .order_by(CreditLedger.created_at.desc())
+            .first()
+        )
+        
+        if last_payment:
+            last_activity = last_payment.created_at
+        else:
+            last_activity = customer.created_at
+
+        # Ensure last_activity is timezone-aware
+        if last_activity and last_activity.tzinfo is None:
+             # Assume UTC if naive, or just use as is? 
+             # Safer: Make current time naive if db time is naive, or both aware.
+             # DB returns aware usually. 
+             pass
+
+        # Use timezone-aware current time
+        from datetime import timezone
+        current_time = datetime.now(timezone.utc)
+        
+        # If last_activity is naive (unlikely with Postgres/SQLAlchemy DateTime(timezone=True)), make it aware?
+        # Actually, let's just make both aware or both naive.
+        # Simplest: make current time aware.
+        
+        if last_activity.tzinfo is None:
+             last_activity = last_activity.replace(tzinfo=timezone.utc)
+             
+        overdue_days = (current_time - last_activity).days
+        
+        if overdue_days > 7:
+            # FREEZE ORDER
+            session.owner_approval_required = True
+            update_workflow_state(db, session.order_id, OrderState.WAITING_OWNER_CONFIRMATION)
+            
+            # Notify Owner
+            owner_phone = os.getenv("OWNER_PHONE_NUMBER")
+            if owner_phone:
+                item_summary = ", ".join([f"{i.measurement.material_name} ({i.measurement.input_quantity})" for i in session.items])
+                msg = (
+                    f"⚠️ *Approval Needed* (Overdue)\n\n"
+                    f"Customer: {customer.business_name or customer_phone}\n"
+                    f"Overdue: ₹{float(customer.outstanding_balance)} ({overdue_days} days)\n"
+                    f"Order: {item_summary}\n\n"
+                    f"Reply 'YES' to approve."
+                )
+                send_whatsapp_message(owner_phone, msg)
+            
+            return {
+                "order_id": session.order_id,
+                "workflow_state": OrderState.WAITING_OWNER_CONFIRMATION,
+                "responses": [{
+                    "response": {
+                        "message": f"⚠️ Your account is overdue by ₹{customer.outstanding_balance}. \nYour order is waiting for owner approval.",
+                        "next_step": "WAITING_OWNER"
+                    }
+                }]
+            }
+
     session.available_batches = available_batches
     
     responses = []
@@ -114,6 +188,12 @@ def process_customer_order(
             session.order_id,
             OrderState.CUSTOMER_NEGOTIATION
         )
+
+        return {
+            "order_id": session.order_id,
+            "workflow_state": OrderState.CUSTOMER_NEGOTIATION,
+            "responses": responses
+        }
     
     
     else:

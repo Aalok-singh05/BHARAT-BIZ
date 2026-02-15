@@ -175,25 +175,41 @@ def record_payment(req: PaymentRequest):
     """
     from decimal import Decimal
     from app.crud.credit import add_payment
+    from app.models.customer import Customer # Import needed for lookup
 
     db = SessionLocal()
 
     try:
+        # --- NORMALIZATION LOGIC ---
+        input_phone = req.customer_phone.strip()
+        customer = db.query(Customer).filter(Customer.phone_number == input_phone).first()
+        
+        if not customer:
+            if not input_phone.startswith("+"):
+                customer = db.query(Customer).filter(Customer.phone_number == "+" + input_phone).first()
+        
+        if not customer:
+            if input_phone.startswith("+"):
+                customer = db.query(Customer).filter(Customer.phone_number == input_phone[1:]).first()
+
+        if not customer:
+            raise HTTPException(status_code=404, detail=f"Customer with phone {req.customer_phone} not found.")
+
+        # Use the ACTUALLY STORED phone number
+        actual_phone = customer.phone_number
+
         entry = add_payment(
             db=db,
-            customer_phone=req.customer_phone,
+            customer_phone=actual_phone,
             amount=Decimal(str(req.amount))
         )
 
         db.commit()
 
         # Fetch updated balance
-        from app.models.customer import Customer
-        customer = (
-            db.query(Customer)
-            .filter(Customer.phone_number == req.customer_phone)
-            .first()
-        )
+        # We already have customer object attached to session, just refresh it?
+        # Or re-query to be safe with session management.
+        db.refresh(customer)
 
         return {
             "status": "success",

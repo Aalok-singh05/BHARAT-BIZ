@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.models.material import Material
-from app.schemas.material_schema import MaterialSchema, MaterialPriceUpdate
+from app.schemas.material_schema import MaterialSchema, MaterialPriceUpdate, MaterialCreate
 from decimal import Decimal
 
 router = APIRouter(prefix="/config", tags=["Configuration"])
@@ -77,4 +77,37 @@ def update_price(update: MaterialPriceUpdate, db: Session = Depends(get_db)):
         "status": "updated",
         "material": material.material_name,
         "new_price": float(material.price_per_meter)
+    }
+
+
+@router.post("/prices/add")
+def create_material(new_mat: MaterialCreate, db: Session = Depends(get_db)):
+    """
+    Create a new material configuration.
+    Fails if material name already exists.
+    """
+    # 1. Check duplicate
+    existing = db.query(Material).filter(Material.material_name == new_mat.material_name).first()
+    if existing:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Material '{new_mat.material_name}' already exists. Please update its price instead."
+        )
+
+    # 2. Create
+    material = Material(
+        material_name=new_mat.material_name,
+        price_per_meter=Decimal(str(new_mat.price_per_meter)),
+        category=new_mat.category
+    )
+    db.add(material)
+    db.commit()
+    db.refresh(material)
+
+    return {
+        "status": "created",
+        "material_id": str(material.material_id),
+        "material_name": material.material_name,
+        "price_per_meter": float(material.price_per_meter),
+        "category": material.category
     }

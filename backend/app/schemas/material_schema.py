@@ -15,3 +15,8 @@ class MaterialSchema(BaseModel):
 class MaterialPriceUpdate(BaseModel):
     material_name: str
     price_per_meter: float
+
+class MaterialCreate(BaseModel):
+    material_name: str
+    price_per_meter: float
+    category: Optional[str] = None
