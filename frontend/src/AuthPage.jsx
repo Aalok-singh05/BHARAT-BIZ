@@ -60,11 +60,8 @@ const AuthPage = ({ mode = 'login' }) => {
 
         {/* Header */}
         <div className="text-center mb-8">
-          <Link to="/" className="text-2xl font-bold gradient-text inline-block mb-2">Helper</Link>
+          <Link to="/" className="text-2xl font-bold gradient-text inline-block mb-2">Saathi</Link>
           <h2 className="text-3xl font-bold mb-2">{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
-          <p className="text-[#a89d94] text-sm">
-            {isLogin ? 'Enter your details to access your workspace.' : 'Start your 14-day free trial today.'}
-          </p>
         </div>
 
         {error && (
@@ -113,7 +110,7 @@ const AuthPage = ({ mode = 'login' }) => {
             disabled={loading}
             className="w-full bg-[#ff9f43] text-[#0a0808] font-bold text-lg py-3.5 rounded-xl hover:bg-[#ffb366] transition-all hover:scale-[1.02] shadow-[0_4px_20px_rgba(255,159,67,0.3)] mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Start Free Trial')}
+            {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'SignUp')}
           </button>
         </form>
 

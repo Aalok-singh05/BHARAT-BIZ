@@ -147,7 +147,7 @@ const AgenticAICopilot = () => {
               <Link to="/login"><button className="text-[#f5f3f0] hover:text-[#ff9f43] font-semibold transition-colors">Login</button></Link>
               <Link to="/signup">
                 <button className="px-5 py-2.5 bg-[#ff9f43] text-[#0a0808] rounded-lg font-bold hover:bg-[#ffb366] transition-all hover:scale-105 shadow-[0_0_15px_rgba(255,159,67,0.3)]">
-                  Start Free
+                  SignUp
                 </button>
               </Link>
             </div>
@@ -161,7 +161,7 @@ const AgenticAICopilot = () => {
           🇮🇳 Built for Indian SMBs
         </div>
         <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-8 animate-fadeInUp leading-[1.1] max-w-5xl">
-          <span className="gradient-text">Bharat BIZ</span><br />
+          <span className="gradient-text">Saathi AI</span><br />
           <span className="text-[#f5f3f0]">Business Ab Jeetega</span>
         </h1>
         <p className="text-lg md:text-2xl text-[#a89d94] mb-12 max-w-3xl animate-fadeInUp leading-relaxed" style={{ animationDelay: '0.2s' }}>
@@ -248,9 +248,6 @@ const AgenticAICopilot = () => {
                     </div>
                   </div>
                 </div>
-                <div className="absolute -bottom-4 -right-4 glass-card px-4 py-2 rounded-full text-xs text-[#4cd964] border border-[#4cd964]/30 shadow-lg flex items-center gap-2 animate-bounce" style={{ animationDuration: '3s' }}>
-                  <span>⚡</span> AI Confidence: 99.8%
-                </div>
               </div>
             </div>
           </div>
@@ -322,8 +319,6 @@ const AgenticAICopilot = () => {
             <p className="text-center text-[#a89d94] mb-8 text-sm uppercase tracking-widest">Works seamlessly with</p>
             <div className="flex flex-wrap justify-center items-center gap-12 md:gap-20 opacity-70 grayscale hover:grayscale-0 transition-all duration-500">
               <div className="flex items-center gap-2 text-xl font-bold text-[#25D366]"><span className="text-3xl">💬</span> WhatsApp</div>
-              <div className="flex items-center gap-2 text-xl font-bold text-[#f5f3f0]"><span className="text-3xl">₹</span> UPI</div>
-              <div className="flex items-center gap-2 text-xl font-bold text-[#f5b041]"><span className="text-3xl">📊</span> Tally/Vyapar</div>
             </div>
           </div>
 
@@ -369,12 +364,12 @@ const AgenticAICopilot = () => {
             </div>
           </div>
 
-          <div className="text-center">
+          {/* <div className="text-center">
             <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-[#1a1512] border border-[#ff9f43]/20">
               <span className="text-[#4cd964]">🔒</span>
               <span className="text-[#a89d94] text-sm font-medium">Bank-Grade Encryption (AES-256) &nbsp; • &nbsp; Your Data Stays Yours</span>
             </div>
-          </div>
+          </div> */}
         </div>
       </section>
 
