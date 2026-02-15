@@ -32,9 +32,9 @@ const MerchantDashboard = () => {
 
   const fetchAnalytics = async () => {
     await Promise.all([
-      fetchEndpoint('http://localhost:8000/analytics/summary', setMetrics),
-      fetchEndpoint('http://localhost:8000/analytics/revenue?days=7', (data) => setRevenueTrend(Array.isArray(data) ? data : [])),
-      fetchEndpoint('http://localhost:8000/analytics/activity', (data) => setRecentActivity(Array.isArray(data) ? data : []))
+      fetchEndpoint('/api/analytics/summary', setMetrics),
+      fetchEndpoint('/api/analytics/revenue?days=7', (data) => setRevenueTrend(Array.isArray(data) ? data : [])),
+      fetchEndpoint('/api/analytics/activity', (data) => setRecentActivity(Array.isArray(data) ? data : []))
     ]);
     setLoading(false);
   };

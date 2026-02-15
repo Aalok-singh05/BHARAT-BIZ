@@ -32,7 +32,7 @@ export const AuthProvider = ({ children }) => {
             formData.append('username', username);
             formData.append('password', password);
 
-            const response = await axios.post('http://localhost:8000/auth/login', formData);
+            const response = await axios.post('/api/auth/login', formData);
             const { access_token } = response.data;
 
             localStorage.setItem('token', access_token);
@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }) => {
 
     const bypassLogin = async () => {
         try {
-            const response = await axios.post('http://localhost:8000/auth/bypass');
+            const response = await axios.post('/api/auth/bypass');
             const { access_token } = response.data;
 
             localStorage.setItem('token', access_token);
