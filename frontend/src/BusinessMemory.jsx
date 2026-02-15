@@ -44,7 +44,7 @@ const BusinessMemory = () => {
     const fetchBusinessData = async () => {
         setLoading(true);
         try {
-            let url = `/api/analytics/business-memory?view_type=${viewType}`;
+            let url = `http://localhost:8000/analytics/business-memory?view_type=${viewType}`;
             if (viewType === 'date') {
                 url += `&selected_date=${selectedDate}`;
             }

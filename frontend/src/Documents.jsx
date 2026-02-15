@@ -16,8 +16,8 @@ const DocumentVault = () => {
     try {
       setLoading(true);
       const url = search
-        ? `/api/invoices?search=${search}`
-        : `/api/invoices`;
+        ? `http://localhost:8000/invoices?search=${search}`
+        : `http://localhost:8000/invoices`;
 
       const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to fetch invoices");
@@ -43,7 +43,7 @@ const DocumentVault = () => {
 
   const handleDownload = async (invoiceId, invoiceNumber) => {
     try {
-      const res = await fetch(`/api/invoices/${invoiceId}/download`);
+      const res = await fetch(`http://localhost:8000/invoices/${invoiceId}/download`);
       if (!res.ok) throw new Error("Download failed");
 
       const blob = await res.blob();
@@ -70,7 +70,7 @@ const DocumentVault = () => {
 
     setSending(true);
     try {
-      const res = await fetch(`/api/invoices/${selectedInvoice.id}/send`, {
+      const res = await fetch(`http://localhost:8000/invoices/${selectedInvoice.id}/send`, {
         method: 'POST'
       });
       const data = await res.json();

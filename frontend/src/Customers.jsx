@@ -14,7 +14,7 @@ const Customers = () => {
 
     const fetchCustomers = async () => {
         try {
-            const res = await fetch('/api/customers');
+            const res = await fetch('http://localhost:8000/customers');
             const data = await res.json();
             setCustomers(data);
             setLoading(false);
@@ -26,7 +26,7 @@ const Customers = () => {
 
     const startEdit = async (phone) => {
         try {
-            const res = await fetch(`/api/customers/${phone}`);
+            const res = await fetch(`http://localhost:8000/customers/${phone}`);
             const data = await res.json();
             setSelectedCustomer(data);
             setIsDetailModalOpen(true);
@@ -164,8 +164,8 @@ const Customers = () => {
                                     key={tab}
                                     onClick={() => setModalTab(tab)}
                                     className={`px-6 py-3 rounded-t-2xl text-sm font-bold uppercase tracking-wider transition-all ${modalTab === tab
-                                        ? 'bg-[#ff9f43] text-[#0a0808] translate-y-[1px]'
-                                        : 'text-[#a89d94] hover:text-white hover:bg-white/5'
+                                            ? 'bg-[#ff9f43] text-[#0a0808] translate-y-[1px]'
+                                            : 'text-[#a89d94] hover:text-white hover:bg-white/5'
                                         }`}
                                 >
                                     {tab}

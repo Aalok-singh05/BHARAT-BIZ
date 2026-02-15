@@ -54,7 +54,7 @@ const InventoryManagement = () => {
     }
 
     try {
-      const res = await fetch('/api/config/prices/add', {
+      const res = await fetch('http://localhost:8000/config/prices/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -105,7 +105,7 @@ const InventoryManagement = () => {
   const fetchPrices = async () => {
     setLoadingPrices(true);
     try {
-      const res = await fetch('/api/config/prices');
+      const res = await fetch('http://localhost:8000/config/prices');
       const data = await res.json();
       setPrices(data);
     } catch (err) {
@@ -118,7 +118,7 @@ const InventoryManagement = () => {
   const fetchInventory = async () => {
     setLoadingStock(true);
     try {
-      const res = await fetch('/api/inventory');
+      const res = await fetch('http://localhost:8000/inventory');
       const data = await res.json();
       setInventory(data);
     } catch (err) {
@@ -131,7 +131,7 @@ const InventoryManagement = () => {
   const handleUpdatePrice = async (materialName) => {
     if (!tempPrice) return setEditingPriceId(null);
     try {
-      const res = await fetch('/api/config/prices', {
+      const res = await fetch('http://localhost:8000/config/prices', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -170,7 +170,7 @@ const InventoryManagement = () => {
         total_meters: parseFloat(newBatch.total_meters)
       };
 
-      const res = await fetch('/api/inventory/add', {
+      const res = await fetch('http://localhost:8000/inventory/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

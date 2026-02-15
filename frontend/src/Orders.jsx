@@ -15,7 +15,7 @@ const Orders = () => {
     const fetchOrders = async () => {
         setLoading(true);
         try {
-            let url = '/api/orders';
+            let url = 'http://localhost:8000/orders';
             if (filterStatus !== 'ALL') {
                 // Map frontend filter to backend status if needed. 
                 // Backend expects exact status string? 
@@ -56,7 +56,7 @@ const Orders = () => {
 
     const viewDetail = async (orderId) => {
         try {
-            const res = await fetch(`/api/orders/${orderId}`);
+            const res = await fetch(`http://localhost:8000/orders/${orderId}`);
             const data = await res.json();
             setSelectedOrder(data);
             setIsDetailModalOpen(true);

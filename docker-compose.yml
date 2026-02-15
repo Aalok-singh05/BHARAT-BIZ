@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   # Python Backend Service
   backend:
@@ -7,10 +9,14 @@ services:
     container_name: bharat_biz_backend
     ports:
       - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     env_file:
       - .env
+    depends_on:
+      - db
     volumes:
-      - ./backend/app:/app/app
+      - ./backend/app:/app/app # Hot reloading for dev (optional, but good)
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   # React Frontend Service (Served via Nginx)
@@ -25,15 +31,31 @@ services:
       - backend
     restart: always
 
-  # Ngrok Service (For WhatsApp Webhooks)
+  # PostgreSQL Database Service
+  db:
+    image: postgres:15-alpine
+    container_name: bharat_biz_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-bharatbiz}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Ngrok Service (Exposes Frontend)
   ngrok:
     image: ngrok/ngrok:latest
     container_name: bharat_biz_ngrok
     restart: unless-stopped
-    command: http backend:8000
+    command: http frontend:80
     environment:
       NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
     ports:
-      - "4040:4040"
+      - "4040:4040" # Inspector interface
     depends_on:
-      - backend
+      - frontend
+
+volumes:
+  postgres_data:
