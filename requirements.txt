@@ -9,3 +9,5 @@ reportlab
 apscheduler
 langchain-google-genai
 langchain
+passlib[bcrypt]
+python-jose[cryptography]
