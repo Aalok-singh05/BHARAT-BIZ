@@ -7,6 +7,9 @@ from app.models.order import Order
 from app.models.customer import Customer
 from fastapi.responses import FileResponse
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/invoices",
@@ -57,6 +60,78 @@ def get_invoices(
 
     return invoices
 
+def ensure_invoice_pdf_exists(db: Session, invoice: Invoice):
+    """
+    Checks if the invoice PDF exists locally. if not, REGENERATES it.
+    This fixes the issue where invoices generated on one machine are missing on others.
+    """
+    # 1. Check if file exists
+    if invoice.pdf_path and os.path.exists(invoice.pdf_path):
+        return True
+
+    # 2. If missing, REGENERATE
+    logger.warning(f"Invoice PDF missing for {invoice.invoice_number}. Regenerating...")
+    
+    try:
+        from app.models.order_item import OrderItem
+        from app.models.material import Material
+        from app.utils.pdf import generate_invoice_pdf
+        from pathlib import Path
+        from datetime import datetime
+
+        # Fetch Data
+        order = db.query(Order).filter(Order.order_id == invoice.order_id).first()
+        customer = db.query(Customer).filter(Customer.phone_number == order.customer_phone).first()
+        items = db.query(OrderItem).filter(OrderItem.order_id == invoice.order_id).all()
+
+        # Build Items
+        item_rows = []
+        for item in items:
+            material = db.query(Material).filter(Material.material_id == item.material_id).first()
+            amount = float(item.quantity_meters or 0) * float(item.price_per_meter or 0)
+            item_rows.append({
+                "material": material.material_name if material else "Unknown",
+                "qty": float(item.quantity_meters or 0),
+                "rate": float(item.price_per_meter or 0),
+                "amount": amount
+            })
+
+        # Prepare Path
+        invoices_dir = Path("app/invoices")
+        invoices_dir.mkdir(parents=True, exist_ok=True) # Ensure directory exists
+        
+        # Use existing path if valid structure, else create new
+        if invoice.pdf_path and "app/invoices" in invoice.pdf_path.replace("\\", "/"):
+             pdf_path = invoice.pdf_path 
+        else:
+             pdf_path = str(invoices_dir / f"{invoice.invoice_number}.pdf")
+
+        # Call Generator
+        generate_invoice_pdf(
+            context={
+                "invoice_number": invoice.invoice_number,
+                "date": invoice.created_at.strftime("%d-%m-%Y"),
+                "customer_name": customer.business_name or customer.phone_number,
+                "items": item_rows,
+                "subtotal": float(invoice.subtotal),
+                "gst": float(invoice.gst_amount),
+                "total": float(invoice.total_amount)
+            },
+            output_path=pdf_path
+        )
+
+        # Update DB if path changed (normalize separators)
+        invoice.pdf_path = str(pdf_path)
+        db.commit()
+        db.refresh(invoice)
+        
+        logger.info(f"Successfully regenerated invoice: {pdf_path}")
+        return True
+
+    except Exception as e:
+        logger.error(f"Failed to regenerate invoice PDF: {e}")
+        return False
+
 @router.get("/{invoice_id}/download")
 def download_invoice(invoice_id: str, db: Session = Depends(get_db)):
     """
@@ -67,8 +142,9 @@ def download_invoice(invoice_id: str, db: Session = Depends(get_db)):
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
         
-    if not invoice.pdf_path or not os.path.exists(invoice.pdf_path):
-        raise HTTPException(status_code=404, detail="PDF file not found on server")
+    # ATTEMPT REGENERATION IF MISSING
+    if not ensure_invoice_pdf_exists(db, invoice):
+         raise HTTPException(status_code=404, detail="PDF file not found and could not be regenerated.")
 
     return FileResponse(
         path=invoice.pdf_path,
@@ -95,9 +171,9 @@ def send_invoice_whatsapp(invoice_id: str, db: Session = Depends(get_db)):
 
     invoice, phone, business_name = result
 
-    # 2. Validate PDF existence
-    if not invoice.pdf_path or not os.path.exists(invoice.pdf_path):
-        raise HTTPException(status_code=404, detail="PDF file not found on server")
+    # 2. Validate PDF existence (Auto-Regenerate)
+    if not ensure_invoice_pdf_exists(db, invoice):
+        raise HTTPException(status_code=404, detail="PDF file not found and could not be regenerated.")
 
     # 3. Upload PDF to WhatsApp to get Media ID
     try:
@@ -117,4 +193,5 @@ def send_invoice_whatsapp(invoice_id: str, db: Session = Depends(get_db)):
             "whatsapp_response": response
         }
     except Exception as e:
+        logger.error(f"WhatsApp send failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"WhatsApp send failed: {str(e)}")
