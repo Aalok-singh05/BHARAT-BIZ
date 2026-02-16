@@ -4,12 +4,12 @@ from app.database import SessionLocal
 from app.models.inventory import InventoryBatch
 from app.integrations.whatsapp import send_whatsapp_message
 
-OWNER_PHONE = os.getenv("OWNER_PHONE_NUMBER")
 
 def check_low_stock_daily():
     """
     Checks for batches with low stock (< 5 rolls) and notifies the owner.
     """
+    OWNER_PHONE = os.getenv("OWNER_PHONE_NUMBER")
     if not OWNER_PHONE:
         print("OWNER_PHONE_NUMBER not set. Skipping alerts.")
         return

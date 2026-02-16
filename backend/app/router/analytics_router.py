@@ -207,7 +207,7 @@ def get_business_memory(view_type: str = 'month', selected_date: str = None, db:
 
     cancelled_count = db.query(func.count(Order.order_id))\
         .filter(Order.created_at >= start_dt, Order.created_at < end_dt)\
-        .filter(Order.status.in_(['cancelled', 'rejected', 'REJECTED']))\
+        .filter(Order.status.in_(['CANCELLED', 'REJECTED']))\
         .scalar() or 0
 
     # Offline vs Online (Logic: If created by 'system' or specific user? 
@@ -255,14 +255,15 @@ def get_business_memory(view_type: str = 'month', selected_date: str = None, db:
 
     transactions = []
     for t in transactions_db:
+        created = t.created_at
         transactions.append({
             "id": str(t.order_id),
-            "customer": t.customer_phone, # Show phone if name not available (would need join)
+            "customer": t.customer_phone,
             "amount": float(t.total_amount),
-            "type": "Online", # Placeholder
-            "time": t.created_at.strftime("%I:%M %p"),
-            "date": t.created_at.strftime("%Y-%m-%d"),
-            "status": t.status.capitalize()
+            "type": "Online",
+            "time": created.strftime("%I:%M %p") if created else "N/A",
+            "date": created.strftime("%Y-%m-%d") if created else "N/A",
+            "status": t.status.capitalize() if t.status else "Unknown"
         })
 
     return {

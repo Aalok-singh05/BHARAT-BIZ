@@ -110,7 +110,7 @@ def generate_invoice_pdf(context, output_path):
 
     totals_data = [
         ['Subtotal:', f"Rs. {subtotal}"],
-        ['GST (5%):', f"Rs. {gst}"],
+        [f'GST ({round(float(gst / subtotal) * 100) if subtotal else 0}%):', f"Rs. {gst}"],
         ['Total Amount:', f"Rs. {total}"]
     ]
     

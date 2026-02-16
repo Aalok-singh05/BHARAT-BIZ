@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
@@ -22,7 +22,7 @@ def check_overdue_customers():
     db: Session = SessionLocal()
 
     try:
-        cutoff_date = datetime.utcnow() - timedelta(days=OVERDUE_DAYS)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=OVERDUE_DAYS)
 
         customers = (
             db.query(Customer)
@@ -44,6 +44,13 @@ def check_overdue_customers():
             last_activity_date = (
                 last_payment.created_at if last_payment else customer.created_at
             )
+
+            if not last_activity_date:
+                continue  # Skip if no date available
+
+            # Ensure aware datetime for comparison
+            if last_activity_date.tzinfo is None:
+                last_activity_date = last_activity_date.replace(tzinfo=timezone.utc)
 
             if last_activity_date < cutoff_date:
                 # Flag active sessions for owner review

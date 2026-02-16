@@ -237,9 +237,9 @@ def approve_order(order_id: str):
             
             # B. Notify CUSTOMER (Text Only)
             customer_msg = (
-                f"✅ Update: Your order has been APPROVED!\n"
+                f"✅ Aapka order APPROVE ho gaya hai!\n"
                 f"Order ID: {order_id}\n\n"
-                f"We are generating your final tax invoice and will share it shortly."
+                f"Hum aapka final tax invoice bana rahe hain, jaldi share karenge."
             )
             send_whatsapp_message(session.customer_phone, customer_msg)
                 
@@ -265,7 +265,7 @@ def reject_order(order_id: str):
         update_workflow_state(db, order_id, OrderState.ORDER_REJECTED)
         db.commit()
         
-        send_whatsapp_message(session.customer_phone, "Your order has been rejected by the owner.")
+        send_whatsapp_message(session.customer_phone, "❌ Aapka order owner dwara reject kar diya gaya hai. Agar koi sawal ho toh humse contact karein.")
         return {"status": "rejected"}
     except Exception as e:
         db.rollback()

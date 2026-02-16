@@ -89,7 +89,7 @@ def get_customer_detail(phone: str, db: Session = Depends(get_db)):
 
     # 2. Lifetime Value (Sum of completed orders)
     ltv = db.query(func.sum(Order.total_amount))\
-        .filter(Order.customer_phone == phone, Order.status == 'completed')\
+        .filter(Order.customer_phone == phone, Order.status == 'COMPLETED')\
         .scalar() or 0.0
 
     # 3. Payment/Credit History from Ledger

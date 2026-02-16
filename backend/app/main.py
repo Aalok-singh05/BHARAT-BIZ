@@ -17,7 +17,6 @@ import app.models  # IMPORTANT: loads all models
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.scheduler.reminders import check_overdue_customers
 from app.scheduler.alerts import check_low_stock_daily
-from app.scheduler.alerts import check_low_stock_daily
 
 # Core routing
 from app.router.message_router import route_message
@@ -49,11 +48,7 @@ app.add_middleware(
 )
 
 
-# ---------------- Scheduler ---------------- #
-
-scheduler = BackgroundScheduler()
-scheduler.add_job(check_overdue_customers, "interval", days=7)
-scheduler.start()
+# Scheduler is initialized in start_scheduler() startup event below
 
 
 # ---------------- Routers ---------------- #
@@ -92,7 +87,7 @@ def root():
 
 
 
-VERIFY_TOKEN = os.getenv("WEBHOOK_VERIFY_TOKEN")
+# VERIFY_TOKEN is read at runtime inside verify_webhook()
 
 
 @app.get("/webhook")
@@ -102,7 +97,8 @@ async def verify_webhook(request: Request):
     token = params.get("hub.verify_token")
     challenge = params.get("hub.challenge")
 
-    if mode == "subscribe" and token == VERIFY_TOKEN:
+    verify_token = os.getenv("WEBHOOK_VERIFY_TOKEN")
+    if mode == "subscribe" and token == verify_token:
         return PlainTextResponse(content=challenge)
 
     return PlainTextResponse(content="Verification failed", status_code=403)
@@ -358,7 +354,7 @@ def set_gst_rate(req: GSTConfigRequest):
 # ----------------------------------------------------------------
 @app.on_event("startup")
 def start_scheduler():
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(check_overdue_customers, 'interval', hours=24)
-    scheduler.add_job(check_low_stock_daily, 'cron', hour=9, minute=0) # Daily alert at 9 am
-    scheduler.start()
+    sched = BackgroundScheduler()
+    sched.add_job(check_overdue_customers, 'interval', hours=24)
+    sched.add_job(check_low_stock_daily, 'cron', hour=9, minute=0)
+    sched.start()

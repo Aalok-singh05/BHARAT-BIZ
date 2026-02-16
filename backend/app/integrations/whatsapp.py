@@ -2,19 +2,24 @@ import os
 import requests
 import json
 
-WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
-PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
-API_VERSION = "v18.0"
-BASE_URL = f"https://graph.facebook.com/{API_VERSION}/{PHONE_NUMBER_ID}"
+
+def _get_whatsapp_config():
+    """Get WhatsApp API configuration at runtime (not import time)."""
+    token = os.getenv("WHATSAPP_TOKEN")
+    phone_id = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
+    api_version = "v18.0"
+    base_url = f"https://graph.facebook.com/{api_version}/{phone_id}"
+    return token, base_url
 
 def send_whatsapp_message(phone: str, message: str):
     """
     Send a basic text message.
     """
-    url = f"{BASE_URL}/messages"
+    token, base_url = _get_whatsapp_config()
+    url = f"{base_url}/messages"
 
     headers = {
-        "Authorization": f"Bearer {WHATSAPP_TOKEN}",
+        "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
 
@@ -41,10 +46,11 @@ def upload_media(file_path: str, mime_type: str = "application/pdf"):
     Uploads a file to WhatsApp Media API.
     Returns the Media ID.
     """
-    url = f"https://graph.facebook.com/{API_VERSION}/{PHONE_NUMBER_ID}/media"
+    token, base_url = _get_whatsapp_config()
+    url = f"{base_url}/media"
     
     headers = {
-        "Authorization": f"Bearer {WHATSAPP_TOKEN}"
+        "Authorization": f"Bearer {token}"
     }
     
     try:
@@ -69,10 +75,11 @@ def send_document_message(phone: str, media_id: str, filename: str, caption: str
     """
     Send a document (PDF) using a Media ID.
     """
-    url = f"{BASE_URL}/messages"
+    token, base_url = _get_whatsapp_config()
+    url = f"{base_url}/messages"
 
     headers = {
-        "Authorization": f"Bearer {WHATSAPP_TOKEN}",
+        "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
 

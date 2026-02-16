@@ -9,7 +9,7 @@ def create_order(
 ):
     order = Order(
         customer_phone=customer_phone,
-        status="pending"
+        status="PENDING"
     )
 
     db.add(order)

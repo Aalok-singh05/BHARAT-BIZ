@@ -28,8 +28,7 @@ def get_inventory_batches(
         .all()
     )
 
-from sqlalchemy.orm import Session
-from app.models.inventory import InventoryBatch
+
 
 
 def deduct_inventory_from_batch(

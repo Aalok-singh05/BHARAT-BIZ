@@ -9,3 +9,5 @@ from .invoice import Invoice
 from .order_session import OrderSessionDB
 from .order_session_item import OrderSessionItemDB
 from .gst_config import GSTConfig
+from .message import Message
+from .owner import Owner
