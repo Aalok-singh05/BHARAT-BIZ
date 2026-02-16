@@ -46,7 +46,7 @@ const MerchantDashboard = () => {
   const maxRevenue = maxVal > 0 ? maxVal : 100;
 
   return (
-    <div className="min-h-screen bg-[#0a0808] text-[#f5f3f0] p-6 md:p-12 pt-24 font-sans relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#0a0808] text-[#f5f3f0] p-4 sm:p-6 md:p-10 lg:p-12 pt-8 md:pt-12 font-sans relative overflow-x-hidden">
       <div className="max-w-[1400px] mx-auto relative z-10">
 
         {/* Header */}
@@ -95,11 +95,11 @@ const MerchantDashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fadeInUp">
 
           {/* Revenue Chart */}
-          <div className="lg:col-span-2 glass-card rounded-[2.5rem] p-8 border-white/5 flex flex-col justify-between h-full min-h-[450px] relative isolate">
+          <div className="lg:col-span-2 glass-card rounded-[2rem] md:rounded-[2.5rem] p-4 sm:p-6 md:p-8 border-white/5 flex flex-col justify-between h-full min-h-[350px] md:min-h-[450px] relative isolate">
             <h3 className="text-xl font-bold mb-8">Revenue Trend (Last 7 Days)</h3>
 
             {/* Chart Container */}
-            <div className="flex-1 flex items-end justify-between gap-3 h-64 w-full">
+            <div className="flex-1 flex items-end justify-between gap-1.5 sm:gap-3 h-48 md:h-64 w-full overflow-x-auto">
 
               {/* Empty State */}
               {!loading && revenueTrend.every(d => (d.revenue || 0) === 0) && (
@@ -149,7 +149,7 @@ const MerchantDashboard = () => {
             {/* Quick Actions */}
             <div className="glass-card rounded-[2.5rem] p-6 border-white/5 flex flex-col gap-4 relative isolate">
               <h3 className="text-lg font-bold">Quick Actions</h3>
-              <div className="flex gap-4">
+              <div className="flex flex-wrap gap-4">
                 <Link to="/approvals" className="flex-1 p-3 bg-[#ff9f43]/20 text-[#ff9f43] rounded-xl hover:bg-[#ff9f43]/30 text-center text-xs font-bold transition-colors flex flex-col items-center gap-2 group">
                   <CheckCircle className="w-6 h-6 group-hover:scale-110 transition-transform" />
                   Review Pending

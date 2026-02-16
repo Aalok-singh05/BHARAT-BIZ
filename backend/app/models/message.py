@@ -13,4 +13,5 @@ class Message(Base):
     phone_number = Column(String, nullable=False)
     direction = Column(String, nullable=False)  # incoming / outgoing
     content = Column(String, nullable=False)
+    message_type = Column(String, default="text")  # text, image, audio
     timestamp = Column(DateTime, default=datetime.utcnow)

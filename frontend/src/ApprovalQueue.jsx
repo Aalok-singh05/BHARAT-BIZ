@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, Clock, Package, AlertTriangle, RefreshCw, MessageCircle } from 'lucide-react';
 
-// ... (existing code)
-
-
 const API_BASE = '/api';
 
 const ApprovalQueue = () => {
@@ -113,175 +110,179 @@ const ApprovalQueue = () => {
   };
 
   return (
-    <div className="min-h-screen text-[#f5f3f0] relative">
+    <div className="min-h-screen bg-[#0a0808] text-[#f5f3f0] p-4 sm:p-6 md:p-10 lg:p-12 pt-8 md:pt-12 font-sans relative overflow-x-hidden">
+      <div className="max-w-[1200px] mx-auto relative z-10">
 
-      {/* Header */}
-      <div className="mb-8 animate-fadeInUp">
-        <div className="flex items-center justify-between">
+        {/* 1. Header */}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8 animate-fadeInUp">
           <div>
             <h1 className="text-4xl md:text-5xl font-bold mb-2 gradient-text">Approval Queue</h1>
             <p className="text-[#a89d94] text-lg">Orders waiting for your decision</p>
           </div>
           <button
             onClick={fetchPendingOrders}
-            className="px-4 py-3 glass-card rounded-xl hover:bg-[#ff9f43]/10 transition-all group"
+            className="px-4 py-3 glass-card rounded-xl hover:bg-[#ff9f43]/10 transition-all group self-end md:self-auto"
             title="Refresh"
           >
             <RefreshCw className={`w-5 h-5 text-[#ff9f43] group-hover:rotate-180 transition-transform duration-500 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
-      </div>
 
-      {/* Success Toast */}
-      {successMessage && (
-        <div className="fixed top-6 right-6 z-50 animate-fadeInUp">
-          <div className="bg-[#4cd964]/20 border border-[#4cd964]/40 rounded-xl px-6 py-4 backdrop-blur-xl flex items-center gap-3">
-            <CheckCircle className="w-5 h-5 text-[#4cd964]" />
-            <span className="text-[#4cd964] font-semibold text-sm">{successMessage}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Error Banner */}
-      {error && (
-        <div className="mb-6 bg-[#ff6b35]/10 border border-[#ff6b35]/30 rounded-xl px-6 py-4 flex items-center gap-3">
-          <AlertTriangle className="w-5 h-5 text-[#ff6b35]" />
-          <span className="text-[#ff6b35] text-sm">{error}</span>
-          <button onClick={() => setError(null)} className="ml-auto text-[#ff6b35] hover:text-white text-sm">✕</button>
-        </div>
-      )}
-
-      {/* Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="glass-card rounded-2xl p-6 hover:scale-105 transition-all">
-          <div className="text-[#a89d94] text-sm font-semibold mb-2 uppercase tracking-wide">Pending Approvals</div>
-          <div className="text-4xl font-bold gradient-text mb-1">{orders.length}</div>
-          <div className="text-[#ff9f43] text-sm flex items-center gap-1">
-            <Clock className="w-3 h-3" /> Waiting for your review
-          </div>
-        </div>
-        <div className="glass-card rounded-2xl p-6 hover:scale-105 transition-all">
-          <div className="text-[#a89d94] text-sm font-semibold mb-2 uppercase tracking-wide">Total Value</div>
-          <div className="text-4xl font-bold gradient-text mb-1">
-            ₹{orders.reduce((sum, o) => sum + (o.total_estimate || 0), 0).toLocaleString('en-IN')}
-          </div>
-          <div className="text-[#ff9f43] text-sm">Pending revenue</div>
-        </div>
-        <div className="glass-card rounded-2xl p-6 hover:scale-105 transition-all">
-          <div className="text-[#a89d94] text-sm font-semibold mb-2 uppercase tracking-wide">Items</div>
-          <div className="text-4xl font-bold gradient-text mb-1">
-            {orders.reduce((sum, o) => sum + (o.items?.length || 0), 0)}
-          </div>
-          <div className="text-[#ff9f43] text-sm flex items-center gap-1">
-            <Package className="w-3 h-3" /> Line items across orders
-          </div>
-        </div>
-      </div>
-
-      {/* Order Cards */}
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-2 border-[#ff9f43] border-t-transparent rounded-full animate-spin" />
-        </div>
-      ) : orders.length === 0 ? (
-        <div className="glass-card rounded-3xl p-12 text-center animate-fadeInUp">
-          <div className="text-6xl mb-4">✅</div>
-          <h3 className="text-2xl font-bold mb-2">All Clear!</h3>
-          <p className="text-[#a89d94]">No orders pending approval. You're all caught up.</p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {orders.map((order, idx) => (
-            <div
-              key={order.order_id}
-              className="glass-card rounded-3xl p-6 md:p-8 animate-fadeInUp border border-transparent hover:border-[#ff9f43]/20 transition-all"
-              style={{ animationDelay: `${idx * 100}ms` }}
-            >
-              {/* Order Header */}
-              <div className="flex items-start justify-between mb-6">
-                <div>
-                  <h3 className="text-xl font-bold text-[#f5f3f0] mb-1">
-                    {order.customer_name || formatPhone(order.customer_phone)}
-                  </h3>
-                  <div className="flex items-center gap-4 text-sm text-[#a89d94]">
-                    <div className="flex items-center gap-2">
-                      <span>📱 {formatPhone(order.customer_phone)}</span>
-                      <a
-                        href={`https://wa.me/${order.customer_phone.replace(/\D/g, '')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[#4cd964] hover:scale-110 transition-transform"
-                        title="Chat on WhatsApp"
-                      >
-                        <MessageCircle size={16} />
-                      </a>
-                    </div>
-                    <span>🕐 {formatDate(order.created_at)}</span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold gradient-text">
-                    ₹{(order.total_estimate || 0).toLocaleString('en-IN')}
-                  </div>
-                  <div className="text-xs text-[#a89d94] mt-1">Estimated Total</div>
-                </div>
-              </div>
-
-              {/* Item Table */}
-              <div className="glass-card rounded-xl overflow-hidden mb-6">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-[#ff9f43]/10">
-                      <th className="text-left p-3 text-[#a89d94] font-semibold">Material</th>
-                      <th className="text-left p-3 text-[#a89d94] font-semibold">Color</th>
-                      <th className="text-right p-3 text-[#a89d94] font-semibold">Qty (m)</th>
-                      <th className="text-right p-3 text-[#a89d94] font-semibold">Rate (₹/m)</th>
-                      <th className="text-right p-3 text-[#a89d94] font-semibold">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(order.items || []).map((item, i) => (
-                      <tr key={i} className="border-b border-white/5 last:border-0">
-                        <td className="p-3 font-semibold text-[#f5f3f0]">{item.material}</td>
-                        <td className="p-3 text-[#f5f3f0]">{item.color || 'N/A'}</td>
-                        <td className="p-3 text-right text-[#f5f3f0]">{item.quantity}</td>
-                        <td className="p-3 text-right text-[#f5f3f0]">₹{item.price_per_meter}</td>
-                        <td className="p-3 text-right font-semibold text-[#ffb366]">
-                          ₹{((item.quantity || 0) * (item.price_per_meter || 0)).toLocaleString('en-IN')}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-4">
-                <button
-                  onClick={() => handleApprove(order.order_id)}
-                  disabled={actionLoading === order.order_id}
-                  className="flex-1 px-6 py-4 bg-[#4cd964] text-[#0a0808] rounded-xl font-bold text-sm hover:bg-[#5ce67d] transition-all shadow-[0_0_20px_rgba(76,217,100,0.3)] hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {actionLoading === order.order_id ? (
-                    <div className="w-4 h-4 border-2 border-[#0a0808] border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <CheckCircle className="w-4 h-4" />
-                  )}
-                  Approve & Generate Invoice
-                </button>
-                <button
-                  onClick={() => handleReject(order.order_id)}
-                  disabled={actionLoading === order.order_id}
-                  className="px-6 py-4 bg-[#ff6b35]/20 text-[#ff6b35] rounded-xl font-bold text-sm border border-[#ff6b35]/40 hover:bg-[#ff6b35] hover:text-white transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  <XCircle className="w-4 h-4" />
-                  Reject
-                </button>
-              </div>
+        {/* Success Toast */}
+        {successMessage && (
+          <div className="fixed top-6 right-6 z-50 animate-fadeInUp">
+            <div className="bg-[#4cd964]/20 border border-[#4cd964]/40 rounded-xl px-6 py-4 backdrop-blur-xl flex items-center gap-3 shadow-lg shadow-[#4cd964]/10">
+              <CheckCircle className="w-5 h-5 text-[#4cd964]" />
+              <span className="text-[#4cd964] font-semibold text-sm">{successMessage}</span>
             </div>
-          ))}
+          </div>
+        )}
+
+        {/* Error Banner */}
+        {error && (
+          <div className="mb-6 bg-[#ff6b35]/10 border border-[#ff6b35]/30 rounded-xl px-6 py-4 flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-[#ff6b35]" />
+            <span className="text-[#ff6b35] text-sm">{error}</span>
+            <button onClick={() => setError(null)} className="ml-auto text-[#ff6b35] hover:text-white text-sm">✕</button>
+          </div>
+        )}
+
+        {/* 2. Stats Row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          <div className="glass-card rounded-[2rem] p-6 hover:scale-[1.02] transition-all bg-white/[0.02]">
+            <div className="text-[#a89d94] text-xs font-bold uppercase tracking-widest mb-2">Pending Approvals</div>
+            <div className="text-4xl font-bold gradient-text mb-1">{orders.length}</div>
+            <div className="text-[#ff9f43] text-sm flex items-center gap-1 font-medium">
+              <Clock className="w-3 h-3" /> Waiting for review
+            </div>
+          </div>
+          <div className="glass-card rounded-[2rem] p-6 hover:scale-[1.02] transition-all bg-white/[0.02]">
+            <div className="text-[#a89d94] text-xs font-bold uppercase tracking-widest mb-2">Total Value</div>
+            <div className="text-4xl font-bold gradient-text mb-1">
+              ₹{orders.reduce((sum, o) => sum + (o.total_estimate || 0), 0).toLocaleString('en-IN')}
+            </div>
+            <div className="text-[#ff9f43] text-sm font-medium">Potential revenue</div>
+          </div>
+          <div className="glass-card rounded-[2rem] p-6 hover:scale-[1.02] transition-all bg-white/[0.02]">
+            <div className="text-[#a89d94] text-xs font-bold uppercase tracking-widest mb-2">Items</div>
+            <div className="text-4xl font-bold gradient-text mb-1">
+              {orders.reduce((sum, o) => sum + (o.items?.length || 0), 0)}
+            </div>
+            <div className="text-[#ff9f43] text-sm flex items-center gap-1 font-medium">
+              <Package className="w-3 h-3" /> Line items
+            </div>
+          </div>
         </div>
-      )}
+
+        {/* 3. Order Cards */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <div className="w-12 h-12 border-4 border-[#ff9f43] border-t-transparent rounded-full animate-spin" />
+            <p className="text-[#ff9f43] animate-pulse font-medium">Loading Queue...</p>
+          </div>
+        ) : orders.length === 0 ? (
+          <div className="glass-card rounded-[2.5rem] p-16 text-center animate-fadeInUp border-white/5">
+            <div className="text-7xl mb-6 grayscale opacity-50">✅</div>
+            <h3 className="text-3xl font-bold mb-3 gradient-text">All Clear!</h3>
+            <p className="text-[#a89d94] text-lg">No orders pending approval. You're all caught up.</p>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {orders.map((order, idx) => (
+              <div
+                key={order.order_id}
+                className="glass-card rounded-[2.5rem] p-6 md:p-8 animate-fadeInUp border border-white/5 hover:border-[#ff9f43]/30 transition-all shadow-lg shadow-black/20"
+                style={{ animationDelay: `${idx * 100}ms` }}
+              >
+                {/* Order Header */}
+                <div className="flex flex-col md:flex-row items-start justify-between mb-8 gap-4">
+                  <div>
+                    <h3 className="text-2xl font-bold text-[#f5f3f0] mb-2 flex items-center gap-2">
+                      {order.customer_name || formatPhone(order.customer_phone)}
+                      {/* Removing ID from here as requested */}
+                    </h3>
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-[#a89d94]">
+                      <div className="flex items-center gap-2 bg-white/5 px-3 py-1 rounded-full">
+                        <span>📱 {formatPhone(order.customer_phone)}</span>
+                        <a
+                          href={`https://wa.me/${order.customer_phone.replace(/\D/g, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#4cd964] hover:scale-110 transition-transform"
+                          title="Chat on WhatsApp"
+                        >
+                          <MessageCircle size={16} />
+                        </a>
+                      </div>
+                      <span className="bg-white/5 px-3 py-1 rounded-full">🕐 {formatDate(order.created_at)}</span>
+                    </div>
+                  </div>
+                  <div className="text-left md:text-right bg-[#ff9f43]/5 p-4 rounded-2xl border border-[#ff9f43]/10">
+                    <div className="text-3xl font-bold gradient-text font-mono">
+                      ₹{(order.total_estimate || 0).toLocaleString('en-IN')}
+                    </div>
+                    <div className="text-xs text-[#a89d94] mt-1 uppercase tracking-widest font-bold">Estimated Total</div>
+                  </div>
+                </div>
+
+                {/* Item Table */}
+                <div className="glass-card rounded-3xl overflow-hidden mb-8 border-white/5 bg-black/20">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm min-w-[600px] text-left">
+                      <thead>
+                        <tr className="border-b border-white/5 bg-white/[0.02]">
+                          <th className="p-4 text-[#a89d94] font-bold uppercase text-xs tracking-wider">Material</th>
+                          <th className="p-4 text-[#a89d94] font-bold uppercase text-xs tracking-wider">Color</th>
+                          <th className="text-right p-4 text-[#a89d94] font-bold uppercase text-xs tracking-wider">Qty (m)</th>
+                          <th className="text-right p-4 text-[#a89d94] font-bold uppercase text-xs tracking-wider">Rate</th>
+                          <th className="text-right p-4 text-[#a89d94] font-bold uppercase text-xs tracking-wider">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {(order.items || []).map((item, i) => (
+                          <tr key={i} className="hover:bg-white/[0.02] transition-colors">
+                            <td className="p-4 font-bold text-[#f5f3f0]">{item.material}</td>
+                            <td className="p-4 text-[#f5f3f0]/80">{item.color || 'N/A'}</td>
+                            <td className="p-4 text-right text-[#f5f3f0] font-mono">{item.quantity}</td>
+                            <td className="p-4 text-right text-[#f5f3f0] font-mono">₹{item.price_per_meter}</td>
+                            <td className="p-4 text-right font-bold text-[#ffb366] font-mono">
+                              ₹{((item.quantity || 0) * (item.price_per_meter || 0)).toLocaleString('en-IN')}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <button
+                    onClick={() => handleReject(order.order_id)}
+                    disabled={actionLoading === order.order_id}
+                    className="px-8 py-4 bg-[#ff6b35]/10 text-[#ff6b35] rounded-xl font-bold text-sm border border-[#ff6b35]/20 hover:bg-[#ff6b35] hover:text-white transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 order-2 sm:order-1"
+                  >
+                    <XCircle className="w-5 h-5" />
+                    Reject
+                  </button>
+                  <button
+                    onClick={() => handleApprove(order.order_id)}
+                    disabled={actionLoading === order.order_id}
+                    className="flex-1 px-8 py-4 bg-[#4cd964] text-[#0a0808] rounded-xl font-bold text-sm hover:bg-[#5ce67d] transition-all shadow-[0_0_30px_rgba(76,217,100,0.2)] hover:shadow-[0_0_40px_rgba(76,217,100,0.4)] hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 order-1 sm:order-2"
+                  >
+                    {actionLoading === order.order_id ? (
+                      <div className="w-5 h-5 border-2 border-[#0a0808] border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <CheckCircle className="w-5 h-5" />
+                    )}
+                    Approve & Generate Invoice
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

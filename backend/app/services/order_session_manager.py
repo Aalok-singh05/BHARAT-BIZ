@@ -275,8 +275,6 @@ def set_negotiation_pending(
 
     if session_row:
         session_row.negotiation_pending = status
-    if session_row:
-        session_row.negotiation_pending = status
         # db.commit() REMOVED
 
 
@@ -295,8 +293,6 @@ def set_owner_approval(
         .first()
     )
 
-    if session_row:
-        session_row.owner_approval_required = status
     if session_row:
         session_row.owner_approval_required = status
         # db.commit() REMOVED
@@ -324,15 +320,34 @@ def sync_session_items_to_db(
             .first()
         )
 
+        current_status = item.status.value if hasattr(item.status, 'value') else item.status
+
         if not db_item:
+            # -------------------------------------------------
+            # NEW ITEM (created by edit/replace flow) → INSERT
+            # -------------------------------------------------
+            db_item = OrderSessionItemDB(
+                session_item_id=item.item_id,
+                order_id=session.order_id,
+                material_name=item.measurement.material_name,
+                color=item.measurement.color,
+                input_quantity=item.measurement.input_quantity,
+                input_unit=item.measurement.input_unit,
+                normalized_meters=item.measurement.normalized_meters,
+                status=current_status,
+                replaced_by=item.replaced_by,
+                inventory_status=item.inventory_status,
+                available_meters=item.available_meters,
+                fulfilled_batches=item.fulfilled_batches,
+                requested_meters=item.requested_meters,
+            )
+            db.add(db_item)
             continue
 
         # Sync all mutable fields
         # -------------------------------------------------
         # DATA INTEGRITY GUARD
         # -------------------------------------------------
-        
-        current_status = item.status.value if hasattr(item.status, 'value') else item.status
         
         # 1. If CANCELLED / REPLACED → Wipe allocations
         if current_status in [OrderItemStatus.CANCELLED.value, OrderItemStatus.REPLACED.value]:
@@ -342,15 +357,19 @@ def sync_session_items_to_db(
         # 2. If ACCEPTED → Validate allocations exist
         elif current_status == OrderItemStatus.ACCEPTED.value:
             if not item.fulfilled_batches:
-                # If AI accepted but didn't assign batches -> Critical Error
-                # We revert to NEGOTIATING to be safe, or raise Error?
-                # Raising error is safer to prevent bad state.
-                raise ValueError(f"Item {item.item_id} is ACCEPTED but has no fulfilled_batches.")
+                # Revert to NEGOTIATING to prevent bad state
+                current_status = OrderItemStatus.NEGOTIATING.value
+                item.status = OrderItemStatus.NEGOTIATING
                 
-            # Validate structure
-            for batch in item.fulfilled_batches:
-                if "batch_id" not in batch:
-                    raise ValueError(f"Invalid batch data in item {item.item_id}: {batch}")
+            else:
+                # Validate structure
+                for batch in item.fulfilled_batches:
+                    if "batch_id" not in batch:
+                        # Bad batch data — revert to safe state
+                        print(f"Invalid batch data in item {item.item_id}: {batch}")
+                        current_status = OrderItemStatus.NEGOTIATING.value
+                        item.status = OrderItemStatus.NEGOTIATING
+                        break
 
         # -------------------------------------------------
         # SYNC TO DB
@@ -367,3 +386,4 @@ def sync_session_items_to_db(
         db_item.normalized_meters = item.measurement.normalized_meters
 
     # db.commit() REMOVED for atomicity
+

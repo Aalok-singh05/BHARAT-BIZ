@@ -234,7 +234,7 @@ const InventoryManagement = () => {
 
   // --- Render ---
   return (
-    <div className="min-h-screen bg-[#0a0808] text-[#f5f3f0] p-6 md:p-12 pt-24 font-sans relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#0a0808] text-[#f5f3f0] p-4 sm:p-6 md:p-10 lg:p-12 pt-8 md:pt-12 font-sans relative overflow-x-hidden">
       <div className="max-w-[1400px] mx-auto relative z-10">
 
         {/* Header */}
@@ -277,50 +277,55 @@ const InventoryManagement = () => {
             </div>
 
             <div className="glass-card rounded-[2.5rem] overflow-hidden border-white/5">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-white/5 text-[#a89d94] text-[10px] uppercase tracking-widest font-bold">
-                    <th className="p-6">Batch ID</th>
-                    <th className="p-6">Material</th>
-                    <th className="p-6">Color</th>
-                    <th
-                      className="p-6 cursor-pointer hover:text-white transition-colors select-none"
-                      onClick={() => requestSort('rolls_available')}
-                    >
-                      <div className="flex items-center gap-2">
-                        Available Stock
-                        {getSortIcon('rolls_available')}
-                      </div>
-                    </th>
-                    <th
-                      className="p-6 cursor-pointer hover:text-white transition-colors select-none"
-                      onClick={() => requestSort('created_at')}
-                    >
-                      <div className="flex items-center gap-2">
-                        Received
-                        {getSortIcon('created_at')}
-                      </div>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {sortedInventory.map(b => (
-                    <tr key={b.batch_id} className="hover:bg-white/[0.02] transition-colors">
-                      <td className="p-6 font-mono text-xs text-[#ff9f43]">{b.batch_id}</td>
-                      <td className="p-6 font-bold">{b.material_name}</td>
-                      <td className="p-6">{b.color || 'N/A'}</td>
-                      <td className="p-6">
-                        <div className="font-bold">{b.rolls_available} Rolls</div>
-                        <div className="text-xs text-[#a89d94]">{b.loose_meters_available} meters (loose)</div>
-                      </td>
-                      <td className="p-6 text-xs text-[#a89d94]">{new Date(b.created_at).toLocaleDateString()}</td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[700px]">
+                  <thead>
+                    <tr className="bg-white/5 text-[#a89d94] text-[10px] uppercase tracking-widest font-bold">
+                      <th className="p-6">Material</th>
+                      <th className="p-6">Color</th>
+                      <th
+                        className="p-6 cursor-pointer hover:text-white transition-colors select-none"
+                        onClick={() => requestSort('rolls_available')}
+                      >
+                        <div className="flex items-center gap-2">
+                          Available Stock
+                          {getSortIcon('rolls_available')}
+                        </div>
+                      </th>
+                      <th
+                        className="p-6 cursor-pointer hover:text-white transition-colors select-none"
+                        onClick={() => requestSort('created_at')}
+                      >
+                        <div className="flex items-center gap-2">
+                          Received
+                          {getSortIcon('created_at')}
+                        </div>
+                      </th>
                     </tr>
-                  ))}
-                  {sortedInventory.length === 0 && !loadingStock && (
-                    <tr><td colSpan="5" className="p-8 text-center text-[#a89d94]">No stock found.</td></tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {sortedInventory.map(b => (
+                      <tr key={b.batch_id} className="hover:bg-white/[0.02] transition-colors">
+                        <td className="p-6 font-bold">{b.material_name}</td>
+                        <td className="p-6">{b.color || 'N/A'}</td>
+                        <td className="p-6">
+                          <div className="font-bold">{b.rolls_available} Rolls</div>
+                          <div className="text-xs text-[#a89d94]">{b.loose_meters_available} meters (loose)</div>
+                        </td>
+                        <td className="p-6 text-xs text-[#a89d94]">{new Date(b.created_at).toLocaleDateString()}</td>
+                      </tr>
+                    ))}
+                    {loadingStock && (
+                      <tr>
+                        <td colSpan="4" className="p-8 text-center text-[#ff9f43] animate-pulse">Loading Stock...</td>
+                      </tr>
+                    )}
+                    {!loadingStock && sortedInventory.length === 0 && (
+                      <tr><td colSpan="4" className="p-8 text-center text-[#a89d94]">No stock found.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
@@ -338,58 +343,60 @@ const InventoryManagement = () => {
             </div>
 
             <div className="glass-card rounded-[2.5rem] overflow-hidden border-white/5">
-              <table className="w-full text-left border-collapse">
-                {/* ... table headers ... */}
-                <thead>
-                  <tr className="bg-white/5 text-[#a89d94] text-[10px] uppercase tracking-widest font-bold">
-                    <th className="p-6">Material Name</th>
-                    <th className="p-6">Category</th>
-                    <th className="p-6">Price / Meter (₹)</th>
-                    <th className="p-6 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {prices.map(item => (
-                    <tr key={item.material_id} className="hover:bg-white/[0.02] transition-colors group">
-                      <td className="p-6 font-bold text-lg">{item.material_name}</td>
-                      <td className="p-6 text-[#a89d94] text-sm">{item.category || 'N/A'}</td>
-
-                      <td className="p-6">
-                        {editingPriceId === item.material_id ? (
-                          <div className="flex items-center gap-2">
-                            <input
-                              autoFocus
-                              type="number"
-                              className="w-32 bg-[#ff9f43] text-[#0a0808] font-bold px-3 py-1.5 rounded-lg outline-none"
-                              placeholder={item.price_per_meter}
-                              value={tempPrice}
-                              onChange={(e) => setTempPrice(e.target.value)}
-                              onKeyDown={(e) => e.key === 'Enter' && handleUpdatePrice(item.material_name)}
-                            />
-                            <button onClick={() => handleUpdatePrice(item.material_name)} className="text-xs font-bold text-[#ff9f43]">SAVE</button>
-                          </div>
-                        ) : (
-                          <div className="text-xl font-bold text-[#ff9f43]">₹{item.price_per_meter}</div>
-                        )}
-                      </td>
-
-                      <td className="p-6 text-right">
-                        {editingPriceId !== item.material_id && (
-                          <button
-                            onClick={() => {
-                              setEditingPriceId(item.material_id);
-                              setTempPrice(item.price_per_meter);
-                            }}
-                            className="px-5 py-2 glass-card rounded-xl text-xs font-bold hover:bg-white/10 transition-all border-[#ff9f43]/30"
-                          >
-                            Edit Price
-                          </button>
-                        )}
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[600px]">
+                  {/* ... table headers ... */}
+                  <thead>
+                    <tr className="bg-white/5 text-[#a89d94] text-[10px] uppercase tracking-widest font-bold">
+                      <th className="p-6">Material Name</th>
+                      <th className="p-6">Category</th>
+                      <th className="p-6">Price / Meter (₹)</th>
+                      <th className="p-6 text-right">Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {prices.map(item => (
+                      <tr key={item.material_id} className="hover:bg-white/[0.02] transition-colors group">
+                        <td className="p-6 font-bold text-lg">{item.material_name}</td>
+                        <td className="p-6 text-[#a89d94] text-sm">{item.category || 'N/A'}</td>
+
+                        <td className="p-6">
+                          {editingPriceId === item.material_id ? (
+                            <div className="flex items-center gap-2">
+                              <input
+                                autoFocus
+                                type="number"
+                                className="w-32 bg-[#ff9f43] text-[#0a0808] font-bold px-3 py-1.5 rounded-lg outline-none"
+                                placeholder={item.price_per_meter}
+                                value={tempPrice}
+                                onChange={(e) => setTempPrice(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleUpdatePrice(item.material_name)}
+                              />
+                              <button onClick={() => handleUpdatePrice(item.material_name)} className="text-xs font-bold text-[#ff9f43]">SAVE</button>
+                            </div>
+                          ) : (
+                            <div className="text-xl font-bold text-[#ff9f43]">₹{item.price_per_meter}</div>
+                          )}
+                        </td>
+
+                        <td className="p-6 text-right">
+                          {editingPriceId !== item.material_id && (
+                            <button
+                              onClick={() => {
+                                setEditingPriceId(item.material_id);
+                                setTempPrice(item.price_per_meter);
+                              }}
+                              className="px-5 py-2 glass-card rounded-xl text-xs font-bold hover:bg-white/10 transition-all border-[#ff9f43]/30"
+                            >
+                              Edit Price
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}

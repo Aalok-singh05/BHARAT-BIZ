@@ -17,10 +17,16 @@ def filter_matching_batches(batches: List[InventoryBatchSchema],
     """
     Filters inventory batches by material and color.
     """
+    if not material_name or not color:
+        return []
+
+    mat_lower = material_name.lower()
+    color_lower = color.lower()
+
     return [
         batch for batch in batches        
-        if batch.material_name.lower() == material_name.lower()
-        and batch.color.lower() == color.lower()
+        if (batch.material_name or "").lower() == mat_lower
+        and (batch.color or "").lower() == color_lower
     ]
 
 
@@ -29,9 +35,13 @@ def get_available_colors(batches: List[InventoryBatchSchema],
     """
     Returns a list of unique colors available for a given material.
     """
+    if not material_name:
+        return []
+
+    mat_lower = material_name.lower()
     colors = set()
     for batch in batches:
-        if batch.material_name.lower() == material_name.lower():
+        if (batch.material_name or "").lower() == mat_lower:
             # Only suggest if actual stock exists
             total_meters = calculate_batch_meters(batch)
             if total_meters > 0:

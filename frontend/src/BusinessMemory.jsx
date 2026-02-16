@@ -80,11 +80,11 @@ const BusinessMemory = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#0a0808] text-[#f5f3f0] p-6 md:p-12 pt-24 font-sans relative overflow-x-hidden">
+        <div className="min-h-screen bg-[#0a0808] text-[#f5f3f0] p-4 sm:p-6 md:p-10 lg:p-12 pt-8 md:pt-12 font-sans relative overflow-x-hidden">
             <div className="max-w-[1400px] mx-auto relative z-10">
 
                 {/* 2. Header & View Toggles */}
-                <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4 md:gap-6">
                     <div>
                         <h1 className="text-4xl font-bold gradient-text mb-2">Business Memory</h1>
                         <p className="text-[#a89d94] text-sm">Your digital second brain for business.</p>
@@ -145,12 +145,12 @@ const BusinessMemory = () => {
                                 <h2 className="text-2xl font-bold">
                                     {viewType === 'month' ? `Activity in ${data.period}` : `Activity on ${selectedDate}`}
                                 </h2>
-                                <div className="space-y-4">
+                                <div className="space-y-4 h-[300px] overflow-y-auto custom-scrollbar pr-1">
                                     {data.transactions.length === 0 ? (
-                                        <div className="p-8 text-center text-[#a89d94] glass-card rounded-2xl">No transactions found for this period.</div>
+                                        <div className="p-8 text-center text-[#a89d94] glass-card rounded-2xl h-full flex items-center justify-center">No transactions found for this period.</div>
                                     ) : (
                                         data.transactions.map(t => (
-                                            <div key={t.id} className="glass-card p-5 rounded-2xl flex items-center justify-between hover:border-[#ff9f43]/40 transition-all">
+                                            <div key={t.id} className="glass-card p-5 rounded-2xl flex items-center justify-between hover:border-[#ff9f43]/40 transition-all shrink-0">
                                                 <div className="flex items-center gap-4">
                                                     <div className={`w-1.5 h-8 rounded-full ${t.status === 'Completed' ? 'bg-[#4cd964]' : 'bg-red-500'}`} />
                                                     <div>
@@ -176,21 +176,21 @@ const BusinessMemory = () => {
                                     <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
                                         <span>🧠 Manager Notes</span>
                                     </h3>
-                                    <div className="flex gap-2 mb-4">
+                                    <div className="flex flex-col sm:flex-row gap-2 mb-4">
                                         <input
                                             type="text"
                                             placeholder="Add a quick note..."
-                                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm outline-none focus:border-[#ff9f43]"
+                                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm outline-none focus:border-[#ff9f43] min-w-0"
                                             value={note}
                                             onChange={(e) => setNote(e.target.value)}
                                             onKeyDown={(e) => e.key === 'Enter' && saveNote()}
                                         />
-                                        <button onClick={saveNote} className="bg-[#ff9f43] text-black px-4 rounded-xl font-bold hover:scale-105 transition-transform">+</button>
+                                        <button onClick={saveNote} className="bg-[#ff9f43] text-black px-4 py-2 rounded-xl font-bold hover:scale-105 transition-transform shrink-0 self-start sm:self-auto">+</button>
                                     </div>
                                     <div className="space-y-3 max-h-60 overflow-y-auto custom-scrollbar">
                                         {savedNotes.map(n => (
                                             <div key={n.id} className="group p-3 bg-white/5 rounded-xl text-sm relative hover:bg-white/10 transition-colors">
-                                                <p className="pr-6">{n.text}</p>
+                                                <p className="pr-6 break-words whitespace-pre-wrap">{n.text}</p>
                                                 <p className="text-[10px] text-[#a89d94] mt-1">{n.date}</p>
                                                 <button
                                                     onClick={() => deleteNote(n.id)}
@@ -205,9 +205,9 @@ const BusinessMemory = () => {
                                 </div>
 
                                 {/* Smart Restock */}
-                                <div className="glass-card rounded-[2.5rem] p-6 border-[#ff9f43]/10">
-                                    <h3 className="font-bold text-lg mb-4">Inventory Alerts</h3>
-                                    <div className="space-y-4">
+                                <div className="glass-card rounded-[2.5rem] p-6 border-[#ff9f43]/10 h-[300px] flex flex-col">
+                                    <h3 className="font-bold text-lg mb-4 shrink-0">Inventory Alerts</h3>
+                                    <div className="space-y-4 overflow-y-auto custom-scrollbar pr-1 flex-1">
                                         {data.inventory.length === 0 ? (
                                             <div className="text-center py-6 text-[#4cd964] text-sm">All items well stocked! ✅</div>
                                         ) : (

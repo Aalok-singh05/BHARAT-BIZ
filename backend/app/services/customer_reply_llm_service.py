@@ -24,7 +24,7 @@ def classify_customer_reply(
         [
             f"- {item.material_name} ({item.color})"
             if item.color
-            else f"- {item.material_name}"
+            else f"- {item.material_name} (no color specified)"
             for item in session_items
         ]
     )
@@ -50,7 +50,33 @@ Customer Message:
     if raw_output.startswith("json"):
         raw_output = raw_output[4:].strip()
 
-    parsed = json.loads(raw_output)
+    try:
+        parsed = json.loads(raw_output)
+    except json.JSONDecodeError:
+        # Retry once with stricter instruction
+        retry_prompt = (
+            f"The following text is NOT valid JSON. Extract ONLY the JSON object from it:\n\n{raw_output}"
+        )
+        retry_response = llm.invoke(retry_prompt)
+        retry_output = retry_response.content.strip()
+
+        if retry_output.startswith("```"):
+            retry_output = retry_output.split("```")[1]
+        if retry_output.startswith("json"):
+            retry_output = retry_output[4:].strip()
+
+        try:
+            parsed = json.loads(retry_output)
+        except json.JSONDecodeError:
+            # Safe fallback — no_change for all items
+            print(f"Customer reply LLM parse failed. Raw: {raw_output}")
+            parsed = {
+                "item_decisions": [
+                    {"material": item.material_name, "decision": "no_change"}
+                    for item in session_items
+                ],
+                "language": "hinglish"
+            }
 
     return parsed
 
@@ -80,6 +106,26 @@ Customer Message:
     if raw_output.startswith("json"):
         raw_output = raw_output[4:].strip()
 
-    parsed = json.loads(raw_output)
+    try:
+        parsed = json.loads(raw_output)
+    except json.JSONDecodeError:
+        # Retry once
+        retry_prompt = (
+            f"The following text is NOT valid JSON. Extract ONLY the JSON object from it:\n\n{raw_output}"
+        )
+        retry_response = llm.invoke(retry_prompt)
+        retry_output = retry_response.content.strip()
+
+        if retry_output.startswith("```"):
+            retry_output = retry_output.split("```")[1]
+        if retry_output.startswith("json"):
+            retry_output = retry_output[4:].strip()
+
+        try:
+            parsed = json.loads(retry_output)
+        except json.JSONDecodeError:
+            print(f"Final confirmation LLM parse failed. Raw: {raw_output}")
+            parsed = {"global_intent": "unclear"}
 
     return parsed.get("global_intent", "unclear")
+

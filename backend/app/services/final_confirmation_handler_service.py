@@ -41,15 +41,18 @@ def add_new_items_to_session(session, extracted_items):
             status=OrderItemStatus.NEGOTIATING
         )
 
-        inventory_result = check_inventory(
-            measurement,
-            session.available_batches or [],
-            measurement.color
-        )
-
-        new_item.inventory_status = inventory_result["status"]
-        new_item.available_meters = inventory_result["available_meters"]
-        new_item.fulfilled_batches = inventory_result["fulfilled_batches"]
+        # Only run inventory check if color is present
+        if measurement.color:
+            inventory_result = check_inventory(
+                measurement,
+                session.available_batches or [],
+                measurement.color
+            )
+            new_item.inventory_status = inventory_result["status"]
+            new_item.available_meters = inventory_result["available_meters"]
+            new_item.fulfilled_batches = inventory_result["fulfilled_batches"]
+        else:
+            new_item.inventory_status = None  # Will prompt for color during negotiation
 
         session.items.append(new_item)
         new_items.append(new_item)

@@ -90,7 +90,7 @@ const DocumentVault = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0808] text-[#f5f3f0] p-6 md:p-12 pt-24 font-sans relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#0a0808] text-[#f5f3f0] p-4 sm:p-6 md:p-10 lg:p-12 pt-8 md:pt-12 font-sans relative overflow-x-hidden">
       <div className="max-w-[1400px] mx-auto relative z-10">
 
         {/* Header */}

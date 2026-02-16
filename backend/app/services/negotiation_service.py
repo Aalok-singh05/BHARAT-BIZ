@@ -15,17 +15,18 @@ def generate_inventory_response(order_item: TextileMeasurement,
     requested_meters = order_item.normalized_meters
 
     material = order_item.material_name
+    color_display = color or "(no color)"
 
     if status == "FULL_AVAILABLE":
         message = (
-            f"{color} {material} {requested_meters}m fully available."
+            f"✅ {color_display} {material} {requested_meters}m fully available."
         )
 
         next_step = "CONFIRM_ORDER"
 
     elif status == "PARTIAL_AVAILABLE":
         message = (
-            f"{color} {material} {requested_meters}m requested.\n"
+            f"⚠️ {color_display} {material} {requested_meters}m requested.\n"
             f"Currently {available_meters}m available.\n\n"
             "Aap kya karna chahenge?\n"
             "• Available quantity bhej dein\n"
@@ -36,12 +37,13 @@ def generate_inventory_response(order_item: TextileMeasurement,
 
     else:
         message = (
-            f"{color} {material} abhi stock mein available nahi hai."
+            f"❌ {color_display} {material} abhi stock mein available nahi hai."
         )
 
-        next_step = "OUT_OF_STOCK"
+        next_step = "CUSTOMER_NEGOTIATION"
 
     return {
         "message": message,
         "next_step": next_step
     }
+

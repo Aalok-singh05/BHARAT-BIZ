@@ -69,7 +69,13 @@ def download_invoice(invoice_id: str, db: Session = Depends(get_db)):
         
     if not invoice.pdf_path or not os.path.exists(invoice.pdf_path):
         raise HTTPException(status_code=404, detail="PDF file not found on server")
-        
+
+    return FileResponse(
+        path=invoice.pdf_path,
+        media_type="application/pdf",
+        filename=f"{invoice.invoice_number}.pdf"
+    )
+
 @router.post("/{invoice_id}/send")
 def send_invoice_whatsapp(invoice_id: str, db: Session = Depends(get_db)):
     """

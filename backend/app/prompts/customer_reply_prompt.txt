@@ -14,12 +14,17 @@ POSSIBLE DECISIONS:
 accept_available
 → Customer agrees to proceed with the currently available quantity of the item.
 → Includes affirmation replies like:
-   "haan", "bhej do", "kardo", "ok", "theek hai", "send", etc.
+   "haan", "ha", "haan ji", "bhej do", "kardo", "kar do", "ok",
+   "theek hai", "thik hai", "thik h", "sahi hai", "send",
+   "available bhej do", "jo hai wo bhej do", "chalo theek hai",
+   "kitna bhi ho bhej do", "de do", "laga do"
 
 cancel_item
 → Customer cancels or refuses that specific item.
 → Includes replies like:
-   "mat bhejna", "cancel karo", "rehne do", etc.
+   "mat bhejna", "nahi chahiye", "cancel karo", "cancel kar do",
+   "rehne do", "rehen de", "hatao", "hata do", "remove karo",
+   "nahi", "wo nahi chahiye", "mat bhejo", "chhod do", "skip karo"
 
 request_alternative
 → Customer asks to see other options WITHOUT explicitly changing the item.
@@ -27,14 +32,18 @@ request_alternative
    "aur color dikhao"
    "kuch aur option hai?"
    "dusra material dikhao"
+   "alternative batao"
+   "aur kya hai?"
 
 edit_item
 → Customer wants to MODIFY specification of an item.
 → Includes:
-   - Color change
-   - Material change
-   - Quantity change
+   - Color change: "blue ki jagah red kardo", "color change karo"
+   - Material change: "cotton ki jagah silk kar do"
+   - Quantity change: "50 nahi 30 meter kar do", "quantity kam karo"
    - Any combination of above
+   - "uska color green kar do"
+   - "cotton wala 20 meter kar do"
 
 no_change
 → Customer did not mention this item and gave no clear instruction.
@@ -46,7 +55,7 @@ If decision = edit_item, also extract:
 
 - new_color (if mentioned)
 - new_material (if mentioned)
-- new_quantity (if mentioned)
+- new_quantity (if mentioned, always numeric in meters)
 
 Only include fields that customer explicitly changed.
 Do NOT guess or infer missing fields.
@@ -56,7 +65,8 @@ IMPORTANT INTERPRETATION RULES:
 
 1. GENERAL AFFIRMATION RULE:
 If customer gives general approval like:
-"bhej do", "kardo", "send all", "haan"
+"bhej do", "kardo", "send all", "haan", "sab bhej do", "ok karo",
+"theek hai sab", "haan sab de do", "proceed karo"
 
 Then assume accept_available for ALL pending items.
 
@@ -67,10 +77,12 @@ If customer affirms generally BUT excludes specific materials:
 
 Example:
 Customer: "bhej do bas cotton mat bhejna"
+Customer: "sab de do lekin polyester rehne do"
+Customer: "haan par silk cancel kar do"
 
 Result:
-All items → accept_available  
-Cotton → cancel_item
+All items → accept_available
+Excluded item → cancel_item
 
 ---
 
@@ -80,12 +92,15 @@ Do NOT classify edits as request_alternative.
 
 Example:
 "blue cotton ko red kar do" → edit_item
+"cotton 50 meter ki jagah 30 meter karo" → edit_item
+"polyester ka color green kar do" → edit_item
+"cotton wala kam kar do 20 meter" → edit_item
 
 ---
 
 4. MATERIAL SAFETY RULE:
 Only classify decisions for materials present in Pending Order Items.
-Do NOT invent or add new materials.
+Do NOT invent or add new materials that are not in the pending list.
 
 ---
 
@@ -93,16 +108,42 @@ Do NOT invent or add new materials.
 Customer may give different decisions for different items in same message.
 Interpret each item independently.
 
+Example:
+Customer: "cotton bhej do, polyester cancel karo, silk ka color red karo"
+Result: cotton → accept_available, polyester → cancel_item, silk → edit_item
+
 ---
 
 6. CONTEXT RULE:
-Customer messages may be short and conversational.
+Customer messages may be short and conversational in Hinglish.
 Interpret intent naturally like a real WhatsApp conversation.
+Understand variations like:
+- "wo bhej do" = accept
+- "uspe available de do" = accept_available
+- "wo rehne do" = cancel
+- "wo wala change karo red mein" = edit with new_color: red
 
 ---
 
 7. QUANTITY INTERPRETATION RULE:
 If customer provides new quantity, assume it replaces original requested quantity.
+
+---
+
+8. FUZZY MATERIAL MATCHING RULE:
+Customer may use short names, abbreviations, or misspellings:
+- "poly" = polyester
+- "cotten" = cotton
+- "silke" = silk
+Match to the CLOSEST material in Pending Order Items.
+ALWAYS return the exact material name from the pending list, not the customer's spelling.
+
+---
+
+9. COLOR MATCHING RULE:
+When returning color, use the EXACT color from the Pending Order Items list.
+If customer refers to color loosely (e.g., "uska color" or "jo blue wala hai"),
+match it to the corresponding item's color.
 
 --------------------------------------------------
 LANGUAGE DETECTION:
@@ -126,11 +167,12 @@ Do NOT include extra commentary.
   "item_decisions": [
     {
       "material": "...",
+      "color": "... (color of item from pending list, or null if no color)",
       "decision": "accept_available | cancel_item | request_alternative | edit_item | no_change",
 
-      "new_color": "... (optional)",
-      "new_material": "... (optional)",
-      "new_quantity": number (optional)
+      "new_color": "... (optional, only if decision is edit_item)",
+      "new_material": "... (optional, only if decision is edit_item)",
+      "new_quantity": number (optional, only if decision is edit_item)
     }
   ],
   "language": "hindi | hinglish | english"

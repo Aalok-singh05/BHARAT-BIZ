@@ -28,7 +28,7 @@ class OrderSessionItemDB(Base):
 
     # --- Measurement fields ---
     material_name = Column(String, nullable=False)
-    color = Column(String, nullable=False)
+    color = Column(String, nullable=True)
     input_quantity = Column(Float, nullable=False)
     input_unit = Column(String, nullable=False, default="meter")
     normalized_meters = Column(Float, nullable=False)

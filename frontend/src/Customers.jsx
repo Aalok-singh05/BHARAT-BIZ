@@ -44,7 +44,7 @@ const Customers = () => {
     const [modalTab, setModalTab] = useState('orders');
 
     return (
-        <div className="min-h-screen bg-[#0a0808] text-[#f5f3f0] p-6 md:p-12 pt-24 font-sans relative overflow-x-hidden">
+        <div className="min-h-screen bg-[#0a0808] text-[#f5f3f0] p-4 sm:p-6 md:p-10 lg:p-12 pt-8 md:pt-12 font-sans relative overflow-x-hidden">
             <div className="max-w-[1400px] mx-auto relative z-10">
 
                 {/* Header */}
@@ -69,55 +69,61 @@ const Customers = () => {
 
                 {/* Table */}
                 <div className="glass-card rounded-[2.5rem] overflow-hidden border-white/5 animate-fadeInUp">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-white/5 text-[#a89d94] text-[10px] uppercase tracking-widest font-bold">
-                                <th className="p-6">Customer</th>
-                                <th className="p-6">Outstanding</th>
-                                <th className="p-6">Orders</th>
-                                <th className="p-6 text-right">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                            {filteredCustomers.map(c => (
-                                <tr key={c.phone_number} className="hover:bg-white/[0.02] transition-colors group cursor-pointer" onClick={() => startEdit(c.phone_number)}>
-                                    <td className="p-6">
-                                        <div className="font-bold text-lg">{c.business_name || 'Unregistered'}</div>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <div className="text-xs text-[#a89d94] font-mono tracking-wider">{c.phone_number}</div>
-                                            <a
-                                                href={`https://wa.me/${c.phone_number.replace(/\D/g, '')}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-[#4cd964] hover:scale-110 transition-transform"
-                                                title="Chat on WhatsApp"
-                                                onClick={(e) => e.stopPropagation()}
-                                            >
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /></svg>
-                                            </a>
-                                        </div>
-                                    </td>
-                                    <td className="p-6">
-                                        <div className={`text-2xl font-bold font-mono tracking-tight ${c.outstanding_balance > 0 ? 'text-[#ff9f43]' : 'text-[#4cd964]'}`}>
-                                            ₹{c.outstanding_balance.toLocaleString()}
-                                        </div>
-                                    </td>
-                                    <td className="p-6">
-                                        <div className="font-bold text-lg">{c.order_count}</div>
-                                        <div className="text-[10px] text-[#a89d94] uppercase tracking-wider">Total Orders</div>
-                                    </td>
-                                    <td className="p-6 text-right">
-                                        <button className="px-5 py-2 glass-card rounded-xl text-xs font-bold hover:bg-white/10 text-[#ff9f43] border border-[#ff9f43]/20">
-                                            View Details
-                                        </button>
-                                    </td>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse min-w-[600px]">
+                            <thead>
+                                <tr className="bg-white/5 text-[#a89d94] text-[10px] uppercase tracking-widest font-bold">
+                                    <th className="p-4 md:p-6">Customer</th>
+                                    <th className="p-4 md:p-6">Outstanding</th>
+                                    <th className="p-4 md:p-6">Orders</th>
+                                    <th className="p-4 md:p-6 text-right">Action</th>
                                 </tr>
-                            ))}
-                            {filteredCustomers.length === 0 && !loading && (
-                                <tr><td colSpan="4" className="p-8 text-center text-[#a89d94]">No customers found.</td></tr>
-                            )}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {filteredCustomers.map(c => (
+                                    <tr key={c.phone_number} className="hover:bg-white/[0.02] transition-colors group cursor-pointer" onClick={() => startEdit(c.phone_number)}>
+                                        <td className="p-4 md:p-6">
+                                            <div className="font-bold text-lg">{c.business_name || 'Unregistered'}</div>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <div className="text-xs text-[#a89d94] font-mono tracking-wider">{c.phone_number}</div>
+                                                <a
+                                                    href={`https://wa.me/${c.phone_number.replace(/\D/g, '')}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-[#4cd964] hover:scale-110 transition-transform"
+                                                    title="Chat on WhatsApp"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /></svg>
+                                                </a>
+                                            </div>
+                                        </td>
+                                        <td className="p-4 md:p-6">
+                                            <div className={`text-2xl font-bold font-mono tracking-tight ${c.outstanding_balance > 0 ? 'text-[#ff9f43]' : 'text-[#4cd964]'}`}>
+                                                ₹{c.outstanding_balance.toLocaleString()}
+                                            </div>
+                                        </td>
+                                        <td className="p-6">
+                                            <div className="font-bold text-lg">{c.order_count}</div>
+                                            <div className="text-[10px] text-[#a89d94] uppercase tracking-wider">Total Orders</div>
+                                        </td>
+                                        <td className="p-4 md:p-6 text-right">
+                                            <button className="px-5 py-2 glass-card rounded-xl text-xs font-bold hover:bg-white/10 text-[#ff9f43] border border-[#ff9f43]/20">
+                                                View Details
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {loading && (
+                                    <tr><td colSpan="4" className="p-8 text-center text-[#ff9f43] animate-pulse">Loading Customers...</td></tr>
+                                )}
+                                {!loading && filteredCustomers.length === 0 && (
+                                    <tr>
+                                        <td colSpan="4" className="p-8 text-center text-[#a89d94]">No customers found.</td>
+                                    </tr>
+                                )}</tbody>
+                        </table>
+                    </div>
                 </div>
 
             </div>
@@ -140,7 +146,7 @@ const Customers = () => {
                         </div>
 
                         {/* Top Stats */}
-                        <div className="grid grid-cols-3 gap-6 mb-8 shrink-0">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-8 shrink-0">
                             <div className="glass-card p-6 rounded-[1.5rem] bg-white/[0.03]">
                                 <div className="text-xs text-[#a89d94] uppercase tracking-widest font-bold mb-2">Lifetime Value</div>
                                 <div className="text-3xl font-bold text-[#4cd964] font-mono">₹{selectedCustomer.lifetime_value?.toLocaleString() || '0'}</div>

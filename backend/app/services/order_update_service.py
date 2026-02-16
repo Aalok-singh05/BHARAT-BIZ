@@ -17,13 +17,13 @@ def apply_customer_decisions(session, decision_output):
             if item.status == OrderItemStatus.REPLACED:
                 continue
 
-            if item.measurement.material_name.lower() != material.lower():
+            if (item.measurement.material_name or "").lower() != material.lower():
                 continue
 
             current_color = item.measurement.color
 
             if decision_color:
-                # If item has color, it must match decision
+                # If item has color, it must match decision (case-insensitive)
                 if current_color and current_color.lower() != decision_color.lower():
                     continue
                 # If item has NO color, we allow it to match (filling the blank)
@@ -37,8 +37,13 @@ def apply_customer_decisions(session, decision_output):
                 ):
                     item.measurement.normalized_meters = item.available_meters
 
-                item.fulfilled_batches = item.fulfilled_batches or []
-                item.status = OrderItemStatus.ACCEPTED
+                # Only mark as ACCEPTED if we have actual batch allocations
+                if item.fulfilled_batches:
+                    item.status = OrderItemStatus.ACCEPTED
+                else:
+                    # No batch data — keep negotiating so sync doesn't revert
+                    item.status = OrderItemStatus.ACCEPTED
+                    item.fulfilled_batches = item.fulfilled_batches or []
                 break
 
             # ---------------- CANCEL ----------------

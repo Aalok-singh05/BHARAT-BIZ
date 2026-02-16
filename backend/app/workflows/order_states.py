@@ -9,6 +9,7 @@ class OrderState(str, Enum):
 
     ORDER_INITIATED = "order_initiated"
     ORDER_EXTRACTED = "order_extracted"
+    MEDIA_CONFIRMATION = "media_confirmation"
     INVENTORY_CHECKING = "inventory_checking"
     CUSTOMER_NEGOTIATION = "customer_negotiation"
     FINAL_CUSTOMER_CONFIRMATION = "final_customer_confirmation"

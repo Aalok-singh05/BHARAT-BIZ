@@ -6,15 +6,15 @@ def find_alternatives(session, item: OrderItem) -> List[Dict]:
 
     alternatives = []
 
-    target_material = item.measurement.material_name.lower()
-    target_color = item.measurement.color.lower()
+    target_material = (item.measurement.material_name or "").lower()
+    target_color = (item.measurement.color or "").lower()
 
     batches = session.available_batches or []
 
     for batch in batches:
 
-        batch_material = batch.material_name.lower()
-        batch_color = batch.color.lower()
+        batch_material = (batch.material_name or "").lower()
+        batch_color = (batch.color or "").lower()
 
         # Skip exact same item
         if batch_material == target_material and batch_color == target_color:
@@ -55,10 +55,11 @@ def find_alternatives(session, item: OrderItem) -> List[Dict]:
 def build_alternative_message(item: OrderItem, alternatives: List[Dict]):
 
     measurement = item.measurement
+    color_display = measurement.color or "(no color)"
 
     if not alternatives:
         return (
-            f"{measurement.color} {measurement.material_name} "
+            f"{color_display} {measurement.material_name} "
             f"available nahi hai.\n\n"
             "Filhaal koi alternative stock mein nahi hai."
         )
@@ -74,7 +75,7 @@ def build_alternative_message(item: OrderItem, alternatives: List[Dict]):
     alt_text = "\n".join(alt_lines)
 
     return (
-        f"{measurement.color} {measurement.material_name} "
+        f"{color_display} {measurement.material_name} "
         f"requested quantity available nahi hai.\n\n"
         "Available alternatives:\n"
         f"{alt_text}\n\n"

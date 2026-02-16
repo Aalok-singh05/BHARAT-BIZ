@@ -11,3 +11,4 @@ langchain-google-genai
 langchain
 passlib[bcrypt]
 python-jose[cryptography]
+google-generativeai

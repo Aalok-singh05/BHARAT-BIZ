@@ -120,7 +120,6 @@ async def receive_message(request: Request):
         if "messages" in value:
             msg = value["messages"][0]
             phone = msg["from"]
-            text = msg["text"]["body"]
             message_id = msg["id"]
 
             db = SessionLocal()
@@ -132,21 +131,40 @@ async def receive_message(request: Request):
                     return {"status": "duplicate"}
 
                 # Store incoming message
+                # Detect message type
+                msg_type = msg.get("type", "text")
+                media_info = None
+
+                if msg_type == "text":
+                    text = msg["text"]["body"]
+                elif msg_type == "image":
+                    text = msg.get("image", {}).get("caption", "")
+                    media_info = {"type": "image", "id": msg["image"]["id"], "mime_type": msg["image"]["mime_type"]}
+                elif msg_type == "audio":
+                    text = "[Voice Note]"
+                    media_info = {"type": "audio", "id": msg["audio"]["id"], "mime_type": msg["audio"]["mime_type"]}
+                else:
+                    # Unsupported type
+                    send_whatsapp_message(phone, "🙏 Abhi hum sirf text, image aur voice messages support karte hain.")
+                    return {"status": "unsupported_type"}
+
                 new_message = Message(
                     message_id=message_id,
                     phone_number=phone,
                     direction="incoming",
-                    content=text
+                    content=text,
+                    message_type=msg_type
                 )
                 db.add(new_message)
                 db.commit()
             finally:
                 db.close()
 
-            logger.info(f"Message received: {phone} → {text[:50]}...")
+            logger.info(f"Message received: {phone} → {text[:50]}... [{msg_type}]")
 
-            response_text = route_message(phone, text)
-            send_whatsapp_message(phone, response_text)
+            response_text = route_message(phone, text, media_info)
+            if response_text:
+                send_whatsapp_message(phone, response_text)
 
     except Exception as e:
         logger.error(f"Webhook error: {e}", exc_info=True)

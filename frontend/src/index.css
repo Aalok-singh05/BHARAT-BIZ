@@ -3,6 +3,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 @layer base {
   * {
     margin: 0;
@@ -23,7 +24,12 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: 'Fraunces', serif;
     font-weight: 800;
     line-height: 1.1;
@@ -32,6 +38,7 @@
 }
 
 @layer components {
+
   /* Design System - The "Look" */
   .spotlight-card {
     position: relative;
@@ -45,7 +52,10 @@
   .spotlight-card::before {
     content: '';
     position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     /* A warm orange glow that fades out */
     background: radial-gradient(800px circle at var(--mouse-x) var(--mouse-y), rgba(255, 159, 67, 0.15), transparent 40%);
     opacity: 0;
@@ -57,18 +67,20 @@
   .spotlight-card:hover::before {
     opacity: 1;
   }
-  
+
   /* Ensure text/icons sit ON TOP of the glow */
-  .spotlight-card > * {
+  .spotlight-card>* {
     position: relative;
     z-index: 1;
   }
+
   .glass-card {
     background: rgba(26, 15, 10, 0.4);
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 159, 67, 0.15);
     transition: all 0.3s ease;
-    transform: translate3d(0, 0, 0); /* Force GPU layer to fix backdrop-filter glitches */
+    transform: translate3d(0, 0, 0);
+    /* Force GPU layer to fix backdrop-filter glitches */
     backface-visibility: hidden;
   }
 
@@ -114,6 +126,7 @@
 
 
 @layer utilities {
+
   /* Animations */
   .animate-float {
     animation: float 20s ease-in-out infinite;
@@ -155,30 +168,105 @@
   color: #f5f3f0;
 }
 
+/* Hide scrollbar utility (sidebar nav) */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom thin scrollbar for inner panels */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 159, 67, 0.2);
+  border-radius: 2px;
+}
+
+/* Sidebar backdrop overlay for mobile */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 90;
+  transition: opacity 0.3s ease;
+}
+
 /* Keyframe Definitions */
 @keyframes float {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  25% { transform: translate(30px, -30px) scale(1.05); }
-  50% { transform: translate(-20px, 20px) scale(0.95); }
-  75% { transform: translate(20px, 30px) scale(1.02); }
+
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  25% {
+    transform: translate(30px, -30px) scale(1.05);
+  }
+
+  50% {
+    transform: translate(-20px, 20px) scale(0.95);
+  }
+
+  75% {
+    transform: translate(20px, 30px) scale(1.02);
+  }
 }
 
 @keyframes pulse {
-  0%, 100% { transform: scaleY(0.5); opacity: 0.5; }
-  50% { transform: scaleY(1); opacity: 1; }
+
+  0%,
+  100% {
+    transform: scaleY(0.5);
+    opacity: 0.5;
+  }
+
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
 }
 
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(40px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes glow {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }
 
 @keyframes shimmer {
-  0% { background-position: -1000px 0; }
-  100% { background-position: 1000px 0; }
+  0% {
+    background-position: -1000px 0;
+  }
+
+  100% {
+    background-position: 1000px 0;
+  }
 }

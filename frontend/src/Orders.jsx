@@ -66,7 +66,7 @@ const Orders = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#0a0808] text-[#f5f3f0] p-6 md:p-12 pt-24 font-sans relative overflow-x-hidden">
+        <div className="min-h-screen bg-[#0a0808] text-[#f5f3f0] p-4 sm:p-6 md:p-10 lg:p-12 pt-8 md:pt-12 font-sans relative overflow-x-hidden">
             <div className="max-w-[1400px] mx-auto relative z-10">
 
                 {/* Header */}
@@ -91,37 +91,40 @@ const Orders = () => {
 
                 {/* Table */}
                 <div className="glass-card rounded-[2.5rem] overflow-hidden border-white/5 animate-fadeInUp">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-white/5 text-[#a89d94] text-[10px] uppercase tracking-widest font-bold">
-                                <th className="p-6">Order ID</th>
-                                <th className="p-6">Date</th>
-                                <th className="p-6">Customer</th>
-                                <th className="p-6">Amount</th>
-                                <th className="p-6">Status</th>
-                                <th className="p-6 text-right">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                            {filteredOrders.map(o => (
-                                <tr key={o.order_id} className="hover:bg-white/[0.02] transition-colors group cursor-pointer" onClick={() => viewDetail(o.order_id)}>
-                                    <td className="p-6 font-mono text-xs">{o.order_id.substring(0, 8)}...</td>
-                                    <td className="p-6 text-sm">{new Date(o.created_at).toLocaleDateString()}</td>
-                                    <td className="p-6 font-bold">{o.customer_name}</td>
-                                    <td className="p-6 font-bold">₹{o.total_amount.toLocaleString()}</td>
-                                    <td className={`p-6 text-xs font-bold uppercase ${getStatusColor(o.status)}`}>{o.status}</td>
-                                    <td className="p-6 text-right">
-                                        <button className="px-4 py-2 glass-card rounded-xl text-xs font-bold hover:bg-white/10 text-[#ff9f43]">
-                                            View
-                                        </button>
-                                    </td>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse min-w-[700px]">
+                            <thead>
+                                <tr className="bg-white/5 text-[#a89d94] text-[10px] uppercase tracking-widest font-bold">
+                                    <th className="p-4 md:p-6">Date</th>
+                                    <th className="p-4 md:p-6">Customer</th>
+                                    <th className="p-4 md:p-6">Amount</th>
+                                    <th className="p-4 md:p-6">Status</th>
+                                    <th className="p-4 md:p-6 text-right">Action</th>
                                 </tr>
-                            ))}
-                            {filteredOrders.length === 0 && !loading && (
-                                <tr><td colSpan="6" className="p-8 text-center text-[#a89d94]">No orders found.</td></tr>
-                            )}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {filteredOrders.map(o => (
+                                    <tr key={o.order_id} className="hover:bg-white/[0.02] transition-colors group cursor-pointer" onClick={() => viewDetail(o.order_id)}>
+                                        <td className="p-4 md:p-6 text-sm whitespace-nowrap">{new Date(o.created_at).toLocaleDateString()}</td>
+                                        <td className="p-4 md:p-6 font-bold">{o.customer_name}</td>
+                                        <td className="p-4 md:p-6 font-bold whitespace-nowrap">₹{o.total_amount.toLocaleString()}</td>
+                                        <td className={`p-4 md:p-6 text-xs font-bold uppercase ${getStatusColor(o.status)}`}>{o.status}</td>
+                                        <td className="p-4 md:p-6 text-right">
+                                            <button className="px-4 py-2 glass-card rounded-xl text-xs font-bold hover:bg-white/10 text-[#ff9f43]">
+                                                View
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {loading && (
+                                    <tr><td colSpan="5" className="p-8 text-center text-[#ff9f43] animate-pulse">Loading Orders...</td></tr>
+                                )}
+                                {!loading && filteredOrders.length === 0 && (
+                                    <tr><td colSpan="5" className="p-8 text-center text-[#a89d94]">No orders found.</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
             </div>
@@ -131,7 +134,7 @@ const Orders = () => {
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-xl">
                     <div className="absolute inset-0 bg-[#0a0808]/80" onClick={() => setIsDetailModalOpen(false)} />
                     <div className="relative glass-card w-full max-w-3xl p-8 rounded-[2rem] border-[#ff9f43]/30 animate-fadeInUp max-h-[90vh] overflow-y-auto">
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-8">
                             <div className="glass-card p-4 rounded-xl bg-white/5">
                                 <div className="text-xs text-[#a89d94] uppercase">Customer</div>
                                 <div className="font-bold">{selectedOrder.customer_name}</div>
@@ -171,7 +174,26 @@ const Orders = () => {
 
                         {selectedOrder.invoice_number && (
                             <div className="flex justify-end gap-4">
-                                <button className="px-6 py-3 bg-[#ff9f43] text-[#0a0808] font-bold rounded-xl hover:scale-105 transition-transform">
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            const res = await fetch(`/api/invoices/${selectedOrder.invoice_id}/download`);
+                                            if (!res.ok) throw new Error('Download failed');
+                                            const blob = await res.blob();
+                                            const url = window.URL.createObjectURL(blob);
+                                            const a = document.createElement('a');
+                                            a.href = url;
+                                            a.download = `${selectedOrder.invoice_number}.pdf`;
+                                            document.body.appendChild(a);
+                                            a.click();
+                                            window.URL.revokeObjectURL(url);
+                                            document.body.removeChild(a);
+                                        } catch (err) {
+                                            alert("Failed to download PDF. It might not be generated yet.");
+                                        }
+                                    }}
+                                    className="px-6 py-3 bg-[#ff9f43] text-[#0a0808] font-bold rounded-xl hover:scale-105 transition-transform"
+                                >
                                     Download Invoice PDF
                                 </button>
                             </div>
