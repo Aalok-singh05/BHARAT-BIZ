@@ -1,10 +1,12 @@
-# 🇮🇳 BHARAT-BIZ: The AI-Powered Operating System for Textile Businesses (B2B)
+# Saathi AI: The AI-Powered Operating System for Textile Businesses (B2B)
 
 > **"Where Ancient Trade Meets Artificial Intelligence"**
 
-Bharat-Biz is a comprehensive, AI-first platform designed to modernize the traditional Indian textile business. It bridges the gap between chaotic, informal WhatsApp-based trade and structured, data-driven business management.
+Saathi AI is a comprehensive, AI-first platform designed to modernize the traditional Indian textile business. It bridges the gap between chaotic, informal WhatsApp-based trade and structured, data-driven business management.
 
-Does your business run on WhatsApp? **So does Bharat-Biz.**
+Does your business run on WhatsApp? **So does Saathi AI.**
+
+by Team Fauxfly
 
 ---
 
@@ -22,7 +24,7 @@ Does your business run on WhatsApp? **So does Bharat-Biz.**
 
 ## 🏗️ The System Architecture
 
-A high-level view of how Bharat-Biz powers your trade:
+A high-level view of how Saathi AI powers your trade:
 
 ```mermaid
 graph TD
@@ -75,9 +77,9 @@ We have divided the detailed documentation into four key sections:
 
 ---
 
-## 🏆 Why Bharat-Biz?
+## 🏆 Why Saathi AI?
 
-Traditional ERPs fail in India because they require data entry. **Bharat-Biz requires zero data entry.** 
+Traditional ERPs fail in India because they require data entry. **Saathi AI requires zero data entry.** 
 
 - **It listens.**
 - **It sees.**
